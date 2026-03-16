@@ -1,19 +1,11 @@
-import { PrismaClient } from '@/app/generated/prisma'
-
-const prisma = new PrismaClient()
-
 async function main() {
-    await prisma.test.create({
-        data: {}
-    })
+    // TODO: add seed data when ticket/event models are finalized.
+    console.log("Seed script: no seed data configured.")
 }
 
 main()
-    .then(async () => {
-        await prisma.$disconnect()
-    })
+    .then(async () => {})
     .catch(async (e) => {
         console.error(e)
-        await prisma.$disconnect()
         process.exit(1)
     })

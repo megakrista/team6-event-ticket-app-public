@@ -1,81 +1,99 @@
-import { NextResponse } from "next/server";
-import { prisma } from "../prisma";
-import { getSession } from "../services/session";
 import { TicketInput } from "../types/tickettype";
 
+type TicketStub = TicketInput & {
+  id: string;
+  userId?: string;
+};
 
-export async function createTicket({ ticketInput }: { ticketInput: TicketInput }) {
-  await prisma.eventTicket.create({
-    data: {
-      ticketInput
-    }
-  });
+function createStubTicket(ticketInput: TicketInput, suffix = "stub"): TicketStub {
+  return {
+    ...ticketInput,
+    id: `${ticketInput.eventId}-${suffix}`,
+  };
 }
 
-export async function updateTicket({ ticketInput }: { ticketInput: TicketInput }) {
-  await prisma.event.update({
-    where: { id: ticketInput.eventId },
-    data: {
-      ticketsSold: {
-        increment: ticketInput.quantity
-      }
-    }
-  });
+export async function createTicket({
+  ticketInput,
+}: {
+  ticketInput: TicketInput;
+}) {
+  return {
+    message: "Ticket feature is temporarily stubbed.",
+    ticket: createStubTicket(ticketInput, "create"),
+  };
+}
+
+export async function updateTicket({
+  ticketInput,
+}: {
+  ticketInput: TicketInput;
+}) {
+  return {
+    message: "Ticket feature is temporarily stubbed.",
+    ticket: createStubTicket(ticketInput, "update"),
+  };
 }
 
 export async function findTicketByEventIdService(id: string) {
-    // create new event service
-    return await prisma.eventTicket.findMany({
-        where: {
-            eventId: Number(id)
-        }
-
-    })
+  return [
+    createStubTicket(
+      {
+        eventId: id,
+        buyerName: "Stub User",
+        buyerEmail: "stub@example.com",
+        quantity: 0,
+        totalPrice: 0,
+        availability: 0,
+      },
+      "find-by-event",
+    ),
+  ];
 }
 
 export async function getEventTickets(eventId: string) {
-    try {
-        const tickets = await prisma.eventTicket.findMany({
-            where: { eventId },
-            include: {
-                order: {
-                    select: {
-                        status: true
-                    }
-                }
-            },
-            orderBy: {
-                purchasedAt: 'desc'
-            }
-        });
-        return tickets;
-    } catch (error) {
-        console.error("Error fetching event tickets:", error);
-        return [];
-    }
+  return findTicketByEventIdService(eventId);
 }
 
 export async function deleteTicket(eventId: string) {
-    return prisma.eventTicket.deleteMany({
-      where: { eventId },
-    });
-  }
-
-  export async function getUserTickets({ userId }: { userId: string }) {
-    return prisma.eventTicket.findMany({
-        where: { userId },
-        orderBy: { event: { dateFrom: "desc" } },
-    });
+  return {
+    message: "Ticket feature is temporarily stubbed.",
+    eventId,
+    count: 0,
+  };
 }
 
- export async function getOneTicket(id: string) {
-    return prisma.eventTicket.findUnique({
-        where: { id },
-      });
-      return {
-        message: 'Success',
-      };
-} 
-  
+export async function getUserTickets({ userId }: { userId: string }) {
+  return [
+    {
+      ...createStubTicket(
+        {
+          eventId: "stub-event",
+          buyerName: "Stub User",
+          buyerEmail: "stub@example.com",
+          quantity: 0,
+          totalPrice: 0,
+          availability: 0,
+        },
+        "find-by-user",
+      ),
+      userId,
+    },
+  ];
+}
 
-
+export async function getOneTicket(id: string) {
+  return {
+    ...createStubTicket(
+      {
+        eventId: "stub-event",
+        buyerName: "Stub User",
+        buyerEmail: "stub@example.com",
+        quantity: 0,
+        totalPrice: 0,
+        availability: 0,
+      },
+      "find-one",
+    ),
+    id,
+  };
+}

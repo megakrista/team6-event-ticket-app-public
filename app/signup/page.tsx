@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import { type SignupResponse } from "@/types/signuptype";
 
 type FormState = {
   firstName: string;
@@ -10,11 +11,6 @@ type FormState = {
   email: string;
   password: string;
   confirmPassword: string;
-};
-
-type SignupResponse = {
-  error?: string;
-  message?: string;
 };
 
 export default function SignUpPage() {

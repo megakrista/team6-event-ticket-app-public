@@ -1,17 +1,15 @@
-import { 
-createTicket,
-findTicketByEventIdService,
-deleteTicket,
-getUserTickets
- } from "../services/ticketservices";
-import { NextFunction, Request, Response, Router } from "express";
+import {
+  createTicket,
+  deleteTicket,
+  findTicketByEventIdService,
+  getUserTickets,
+} from "../services/ticketservices";
 
-
-const EventTicketRouter = Router();
-
-EventTicketRouter.post("/create", createTicket);
-EventTicketRouter.post("/event-tickets", findTicketByEventIdService);
-EventTicketRouter.delete("/delete/:id", deleteTicket);
-EventTicketRouter.get("/all", getUserTickets);
+const EventTicketRouter = {
+  createTicket,
+  findTicketByEventIdService,
+  deleteTicket,
+  getUserTickets,
+};
 
 export default EventTicketRouter;
