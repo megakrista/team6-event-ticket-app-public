@@ -19,13 +19,53 @@ enum UserRole {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique //rn it won't be possible to re-use email after soft delete
-  passwordHash String
-  firstName    String
-  lastName     String
-  role         UserRole  @default(USER)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique //rn it won't be possible to re-use email after soft delete
+  passwordHash  String
+  firstName     String
+  lastName      String
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdEvents Event[]
+}
+
+model Venue {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  address   String
+  latitude  Decimal
+  longitude Decimal
+  timezone  String
+  events    Event[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Event {
+  id          String      @id @default(uuid()) @db.Uuid
+  title       String
+  description String      @db.Text
+  startsAt    DateTime
+  endsAt      DateTime
+  capacity    Int
+  price       Decimal
+  imageUrl    String?
+  category    String
+  status      EventStatus
+  version     Int         @default(0)
+  venueId     String      @db.Uuid
+  venue       Venue       @relation(fields: [venueId], references: [id])
+  createdById String      @db.Uuid
+  createdBy   User        @relation(fields: [createdById], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
 }
