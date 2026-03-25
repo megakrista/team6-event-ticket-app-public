@@ -14,9 +14,7 @@ export function hashSessionToken(token: string): string {
 export async function createSession(userId: string) {
   const token = crypto.randomBytes(32).toString("hex");
   const tokenHash = hashSessionToken(token);
-  const expiresAt = new Date(
-    Date.now() + Math.min(IDLE_TIMEOUT_MS, ABSOLUTE_TIMEOUT_MS),
-  );
+  const expiresAt = new Date(Date.now() + IDLE_TIMEOUT_MS);
 
   await prisma.session.create({
     data: {

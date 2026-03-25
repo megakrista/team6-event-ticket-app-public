@@ -15,21 +15,38 @@ export async function postLoginRoute(request: Request) {
   }
 
   const result = await loginFromBody(body);
-  const response = NextResponse.json(result.body, { status: result.status });
 
-  if(result.status !== 200 || !result.body.userId) return response;
+  if (result.status !== 200 || !result.body.userId) {
+    return NextResponse.json(result.body, { status: result.status });
+  }
 
-  const {token, expiresAt} = await createSession(result.body.userId);
+  try {
+    const { token, expiresAt } = await createSession(result.body.userId);
+    const response = NextResponse.json(
+      { message: result.body.message ?? "Login successful" },
+      { status: 200 },
+    );
 
-  response.cookies.set({
-    name: SESSION_COOKIE_NAME,
-    value: token,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: expiresAt,
-  });
+    response.cookies.set({
+      name: SESSION_COOKIE_NAME,
+      value: token,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      expires: expiresAt,
+    });
 
-  return response;
+    return response;
+  } catch (error) {
+    console.error(
+      "Failed to create session after successful credential check",
+      error,
+    );
+
+    return NextResponse.json(
+      { error: "Login failed. Please try again." },
+      { status: 500 },
+    );
+  }
 }
