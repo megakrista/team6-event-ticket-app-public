@@ -1,5 +1,16 @@
-import { VenueResponse } from '@/types/venuetype'
-import { Decimal } from '@prisma/client/runtime/client';
+import { type VenueResponse } from "@/types/venuetype";
+
+export const VALID_CATEGORIES = [
+  "concert",
+  "conference",
+  "workshop",
+  "sports",
+  "theatre",
+  "cinema",
+  "other",
+] as const;
+
+export type EventCategory = (typeof VALID_CATEGORIES)[number];
 
 export type EventResponse = {
   id: string;
@@ -8,7 +19,7 @@ export type EventResponse = {
   startsAt: Date;
   endsAt: Date;
   capacity: number;
-  price: Decimal;
+  price: number;
   imageUrl: string | null;
   category: string;
   status: string;
@@ -20,3 +31,19 @@ export type EventResponse = {
   venue: VenueResponse;
 };
 
+export type CreateEventBody = {
+  title?: string;
+  description?: string;
+  category?: string;
+  imageUrl?: string;
+  startsAt?: string;
+  endsAt?: string;
+  price?: number;
+  capacity?: number;
+  venueId?: string;
+  createdById?: string; // TODO: replace with auth session user
+};
+
+export type EventValidationErrors = {
+  [field: string]: string;
+};

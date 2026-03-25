@@ -7,3 +7,10 @@ export function success<T>(data: T, status = 200) {
 export function error(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
+
+export function validationError(fields: Record<string, string>) {
+  return NextResponse.json(
+    { error: "Validation failed", fields },
+    { status: 400 },
+  );
+}
