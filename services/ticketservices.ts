@@ -1,3 +1,4 @@
+
 import { TicketInput } from "../types/tickettype";
 import { NextRequest, NextResponse } from "next/server";
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
@@ -16,7 +17,7 @@ const generateTicketNumber = () => {
 
 
 
-export async function POST(req: Request) {
+export async function createTicket(req: Request) {
   try {
 
     const body = await req.json();
