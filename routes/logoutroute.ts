@@ -1,52 +1,27 @@
-import { NextResponse } from "next/server";
-import { loginFromBody } from "../services/loginservices";
-import { createSession } from "../services/sessionservices";
-import { type LoginBody } from "../types/logintype";
+import { NextResponse, type NextRequest } from "next/server";
+import { deleteSession } from "@/services/sessionservices";
+import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
 
-const SESSION_COOKIE_NAME = "session";
 
-export async function postLoginRoute(request: Request) {
-  let body: LoginBody;
+export async function postLogoutRoute(request: NextRequest) {
+  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
 
-  try {
-    body = (await request.json()) as LoginBody;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  try{
+    await deleteSession(token);
+  } catch{
+    return NextResponse.json({error: "Logout failed. Please try again."}, { status: 500 });
   }
 
-  const result = await loginFromBody(body);
+  const response = new NextResponse(null, { status: 204 });
+  response.cookies.set({
+    name: SESSION_COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires: new Date(0),
+  });
 
-  if (result.status !== 200 || !result.body.userId) {
-    return NextResponse.json(result.body, { status: result.status });
-  }
-
-  try {
-    const { token, expiresAt } = await createSession(result.body.userId);
-    const response = NextResponse.json(
-      { message: result.body.message ?? "Login successful" },
-      { status: 200 },
-    );
-
-    response.cookies.set({
-      name: SESSION_COOKIE_NAME,
-      value: token,
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      expires: expiresAt,
-    });
-
-    return response;
-  } catch (error) {
-    console.error(
-      "Failed to create session after successful credential check",
-      error,
-    );
-
-    return NextResponse.json(
-      { error: "Login failed. Please try again." },
-      { status: 500 },
-    );
-  }
+  return response;
 }

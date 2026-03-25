@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { loginFromBody } from "../services/loginservices";
 import { createSession } from "../services/sessionservices";
 import { type LoginBody } from "../types/logintype";
-
-const SESSION_COOKIE_NAME = "session";
+import {SESSION_COOKIE_NAME} from "@/lib/auth-constants";
 
 export async function postLoginRoute(request: Request) {
   let body: LoginBody;

@@ -1,3 +1,3 @@
-import { postLoginRoute } from "@/routes/loginroute";
+import { postLogoutRoute } from "@/routes/logoutroute";
 
-export const POST = postLoginRoute;
+export const POST = postLogoutRoute;
