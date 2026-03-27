@@ -24,7 +24,7 @@ export default function LoginPage() {
     if (!success) return;
 
     const timeout = setTimeout(() => {
-      router.push("/sample");
+      router.push("/events");
     }, 900);
 
     return () => clearTimeout(timeout);
