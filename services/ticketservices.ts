@@ -17,12 +17,13 @@ const generateTicketNumber = () => {
 
 
 
-export async function createTicket(req: Request) {
+export async function POST(request: NextRequest) {
   try {
 
-    const body = await req.json();
-    const { id, title, description, attendeeEmail, attendeeName } = body;
+    const body = await request.json();
+    const { id, title, description, attendeeEmail, attendeeName, amount } = await request.json();
     const userId = "kasutaja_id"; 
+
 
     if (!id || !attendeeName || !attendeeEmail) {
       return NextResponse.json({ success: false, message: "Missing fields" }, { status: 400 });
@@ -38,80 +39,46 @@ export async function createTicket(req: Request) {
     }
 
 
+  
+export async function POST(request: NextRequest) {
+  try {
+    const { amount, attendeeEmail, attendeeName, id } = await request.json();
+    const ticketNumber = `TICKET-${Math.random().toString(36).toUpperCase().substring(2, 10)}`;
 
-   const ticket = await prisma.ticket.create({
-    include: { event: true },
-    data: 
-        id,
-        userId,
-        ticketNumber: generateTicketNumber(),
-        attendeeName,
-        attendeeEmail,
-        ticketPrice: event.price,
-  });
-
-  const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [{
-        price_data: {
-          currency: "eur",
-          product_data: {
-            name: `Pilet: ${event.title}`,
-            description: `Üritus: ${event.date.toDateString()}`,
-          },
-          unit_amount: Math.round(event.ticketPrice * 100),
-        },
-        quantity: 1,
-      }],
-      mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/thank-you?session_id={CHECKOUT_SESSION_ID}&ticket_id=${ticket.id}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/events/${id}`,
-      customer_email: attendeeEmail,
-    });
-
-
-
-
-    const updatedTicket = await prisma.ticket.update({
-      where: { id: ticket.id },
-      data: { stripeSessionId: session.id },
-      include: { event: true } // Kui sul on vaja event andmeid vastusesse
-    });
-
-    return NextResponse.json({
-      success: true,
-      sessionId: session.id,
-      sessionUrl: session.url,
-      ticket: {
-        id: updatedTicket.id,
-        ticketNumber: updatedTicket.ticketNumber,
-        attendeeName: updatedTicket.attendeeName,
-        attendeeEmail: updatedTicket.attendeeEmail,
-        ticketPrice: updatedTicket.price,
-        eventTitle: updatedTicket.event.title,
-        eventDate: updatedTicket.event.date,
+    // 1. Loo Stripe PaymentIntent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount,
+      currency: "eur",
+      automatic_payment_methods: { enabled: true },
+      metadata: { 
+        ticket_number: ticketNumber, 
+        event_id: id, 
+        attendeeEmail 
       },
     });
-  } catch (error) {
-    console.error("Create checkout session error:", error);
-    return NextResponse.json(
-      { success: false, message: "Sessiooni loomine ebaõnnestus" },
-      { status: 500 }
-    );
+
+    // 2. Salvesta pilet Prismaga andmebaasi ootel olekusse
+    // Eeldame, et sul on Ticket mudel, mis on seotud Event mudeliga (id kaudu)
+    const ticket = await prisma.ticket.create({
+      data: {
+        ticketNumber: ticketNumber,
+        attendeeName: attendeeName,
+        attendeeEmail: attendeeEmail,
+        ticketPrice: amount / 100, // Teisenda eurodeks
+        stripeSessionId: paymentIntent.id, // Kasutame Intent ID-d sessiooni ID asemel
+        status: "PENDING", // Lisa staatus, et teaksid, mis on maksmata
+        eventId: id, 
+      },
+    });
+
+    return NextResponse.json({ 
+      clientSecret: paymentIntent.client_secret, 
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticketNumber 
+    });
+
+  } catch (error: any) {
+    console.error("Viga makse loomisel:", error);
+    return NextResponse.json({ error: error.message || "viga" }, { status: 500 });
   }
 }
-
-
-
-
-
-export async function deleteTicket(eventId: string) {
-  return {
-    message: "Ticket feature is temporarily stubbed.",
-    eventId,
-    count: 0,
-  };
-}
-
-
-
