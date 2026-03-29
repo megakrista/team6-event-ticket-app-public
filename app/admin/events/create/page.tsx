@@ -14,7 +14,7 @@ export default async function CreateEventPage() {
 
   return (
     <main className="min-h-screen bg-zinc-50 p-8">
-      <CreateEventForm userId={result.user.id} />
+      <CreateEventForm />
     </main>
   );
 }

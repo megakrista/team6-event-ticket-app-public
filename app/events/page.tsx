@@ -1,5 +1,11 @@
+import Link from "next/link";
+import { cookies } from "next/headers";
 import { listEvents } from "@/services/eventservices";
+import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
+import { getSessionByToken } from "@/services/sessionservices";
 import { type EventResponse } from "@/types/eventtype";
+
+export const dynamic = "force-dynamic";
 
 type EventCard = {
   id: string;
@@ -86,6 +92,10 @@ function toEventCards(events: EventResponse[]): EventCard[] {
 export default async function EventsPage() {
   let events: EventResponse[] = [];
   let hasLoadError = false;
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const sessionResult = await getSessionByToken(token);
+  const isAdmin = sessionResult?.user.role === "ADMIN";
 
   try {
     events = await listEvents();
@@ -109,8 +119,18 @@ export default async function EventsPage() {
               Browse upcoming events and pick your next ticket.
             </p>
           </div>
-          <div className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
-            {eventCards.length} event{eventCards.length === 1 ? "" : "s"}
+          <div className="flex items-center gap-3">
+            {isAdmin ? (
+              <Link
+                href="/admin/events/create"
+                className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Create event
+              </Link>
+            ) : null}
+            <div className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              {eventCards.length} event{eventCards.length === 1 ? "" : "s"}
+            </div>
           </div>
         </div>
 

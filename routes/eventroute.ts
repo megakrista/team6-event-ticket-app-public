@@ -1,6 +1,9 @@
 import { createEvent, getEventById, listEvents } from "@/services/eventservices";
 import { success, error, validationError } from "@/lib/api-response";
+import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
+import { getSessionByToken } from "@/services/sessionservices";
 import { type CreateEventBody } from "@/types/eventtype";
+import { cookies } from "next/headers";
 
 export async function getEventsRoute() {
   try {
@@ -12,6 +15,18 @@ export async function getEventsRoute() {
 }
 
 export async function postEventRoute(request: Request) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const sessionResult = await getSessionByToken(token);
+
+  if (!sessionResult) {
+    return error("Unauthorized", 401);
+  }
+
+  if (sessionResult.user.role !== "ADMIN") {
+    return error("Forbidden", 403);
+  }
+
   let body: CreateEventBody;
 
   try {
@@ -20,7 +35,7 @@ export async function postEventRoute(request: Request) {
     return error("Invalid JSON body", 400);
   }
 
-  const result = await createEvent(body);
+  const result = await createEvent(body, sessionResult.user.id);
 
   if (result.validationErrors) {
     return validationError(result.validationErrors);

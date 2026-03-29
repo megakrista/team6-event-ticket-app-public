@@ -41,7 +41,6 @@ export type CreateEventBody = {
   price?: number;
   capacity?: number;
   venueId?: string;
-  createdById?: string; // TODO: replace with auth session user
 };
 
 export type EventValidationErrors = {

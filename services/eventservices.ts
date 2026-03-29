@@ -110,14 +110,10 @@ export function validateCreateEventBody(
     errors.venueId = "Required";
   }
 
-  if (!body.createdById || typeof body.createdById !== "string") {
-    errors.createdById = "Required";
-  }
-
   return errors;
 }
 
-export async function createEvent(body: CreateEventBody) {
+export async function createEvent(body: CreateEventBody, createdById: string) {
   const errors = validateCreateEventBody(body);
 
   if (Object.keys(errors).length > 0) {
@@ -137,7 +133,7 @@ export async function createEvent(body: CreateEventBody) {
         capacity: body.capacity!,
         status: "DRAFT",
         venueId: body.venueId!,
-        createdById: body.createdById!,
+        createdById,
       },
       include: EVENT_INCLUDE,
     });
