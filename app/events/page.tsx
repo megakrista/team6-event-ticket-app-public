@@ -4,6 +4,9 @@ import { listEvents } from "@/services/eventservices";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
 import { getSessionByToken } from "@/services/sessionservices";
 import { type EventResponse } from "@/types/eventtype";
+import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +93,15 @@ function toEventCards(events: EventResponse[]): EventCard[] {
 }
 
 export default async function EventsPage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+  const activeSession = await getSessionByToken(token);
+
+  if (!activeSession) {
+    redirect("/login");
+  }
+
   let events: EventResponse[] = [];
   let hasLoadError = false;
   const cookieStore = await cookies();
@@ -128,6 +140,15 @@ export default async function EventsPage() {
                 Create event
               </Link>
             ) : null}
+        <div className="mb-8 space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-zinc-900">Events</h1>
+              <p className="mt-2 text-zinc-600">
+                Browse upcoming events and pick your next ticket.
+              </p>
+            </div>
+
             <div className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
               {eventCards.length} event{eventCards.length === 1 ? "" : "s"}
             </div>
