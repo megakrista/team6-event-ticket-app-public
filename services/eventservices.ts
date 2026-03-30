@@ -2,7 +2,7 @@ import { Prisma } from "@/app/generated/prisma";
 import prisma from "@/lib/prisma";
 import {
   VALID_CATEGORIES,
-  type CreateEventBody,
+  type EventInput,
   type EventResponse,
   type EventValidationErrors,
 } from "@/types/eventtype";
@@ -22,6 +22,23 @@ type EventWithVenue = Prisma.EventGetPayload<{
   include: typeof EVENT_INCLUDE;
 }>;
 
+type EventValidationFailure = {
+  status: 400;
+  validationErrors: EventValidationErrors;
+};
+
+type EventWriteError =
+  | { status: 400; error: "Venue not found" | "User not found" | "Invalid reference" }
+  | { status: 404; error: "Event not found" }
+  | { status: 500; error: "Internal server error" };
+
+type EventWriteSuccess = {
+  status: 200 | 201;
+  event: EventResponse;
+};
+
+type EventWriteResult = EventValidationFailure | EventWriteError | EventWriteSuccess;
+
 function serializeEvent(event: EventWithVenue): EventResponse {
   return {
     ...event,
@@ -35,7 +52,7 @@ function serializeEvent(event: EventWithVenue): EventResponse {
 }
 
 export function validateCreateEventBody(
-  body: CreateEventBody,
+  body: EventInput,
 ): EventValidationErrors {
   const errors: EventValidationErrors = {};
 
@@ -110,22 +127,55 @@ export function validateCreateEventBody(
     errors.venueId = "Required";
   }
 
-  if (!body.createdById || typeof body.createdById !== "string") {
-    errors.createdById = "Required";
-  }
-
   return errors;
 }
 
-export async function createEvent(body: CreateEventBody) {
-  const errors = validateCreateEventBody(body);
+function mapEventWriteError(err: unknown): EventWriteError {
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === "P2025") {
+      return { status: 404, error: "Event not found" };
+    }
 
-  if (Object.keys(errors).length > 0) {
-    return { status: 400, validationErrors: errors };
+    if (err.code === "P2003") {
+      const field = String(err.meta?.field_name ?? "");
+      if (field.includes("venueId")) {
+        return { status: 400, error: "Venue not found" };
+      }
+      if (field.includes("createdById")) {
+        return { status: 400, error: "User not found" };
+      }
+
+      return { status: 400, error: "Invalid reference" };
+    }
+  }
+
+  return { status: 500, error: "Internal server error" };
+}
+
+async function runEventWrite(
+  body: EventInput,
+  successStatus: 200 | 201,
+  op: () => Promise<EventWithVenue>,
+): Promise<EventWriteResult> {
+  const validationErrors = validateCreateEventBody(body);
+  if (Object.keys(validationErrors).length > 0) {
+    return { status: 400, validationErrors };
   }
 
   try {
-    const event = await prisma.event.create({
+    const event = await op();
+    return { status: successStatus, event: serializeEvent(event) };
+  } catch (err) {
+    return mapEventWriteError(err);
+  }
+}
+
+export async function createEvent(
+  body: EventInput,
+  createdById: string,
+): Promise<EventWriteResult> {
+  return runEventWrite(body, 201, () =>
+    prisma.event.create({
       data: {
         title: body.title!.trim(),
         description: body.description!.trim(),
@@ -137,30 +187,36 @@ export async function createEvent(body: CreateEventBody) {
         capacity: body.capacity!,
         status: "DRAFT",
         venueId: body.venueId!,
-        createdById: body.createdById!,
+        createdById,
       },
       include: EVENT_INCLUDE,
-    });
-
-    return { status: 201, event: serializeEvent(event) };
-  } catch (err) {
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2003"
-    ) {
-      const field = (err.meta?.field_name as string) || "";
-      if (field.includes("venueId")) {
-        return { status: 400, error: "Venue not found" };
-      }
-      if (field.includes("createdById")) {
-        return { status: 400, error: "User not found" };
-      }
-      return { status: 400, error: "Invalid reference" };
-    }
-
-    return { status: 500, error: "Internal server error" };
-  }
+    }),
+  );
 }
+
+export async function updateEvent(
+  id: string,
+  body: EventInput,
+): Promise<EventWriteResult> {
+  return runEventWrite(body, 200, () =>
+    prisma.event.update({
+      where: { id },
+      data: {
+        title: body.title!.trim(),
+        description: body.description!.trim(),
+        category: body.category!.trim(),
+        imageUrl: body.imageUrl || null,
+        startsAt: new Date(body.startsAt!),
+        endsAt: new Date(body.endsAt!),
+        price: body.price!,
+        capacity: body.capacity!,
+        venueId: body.venueId!,
+      },
+      include: EVENT_INCLUDE,
+    }),
+  );
+}
+
 
 export async function getEventById(id: string) {
   const event = await prisma.event.findUnique({

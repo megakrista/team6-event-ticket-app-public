@@ -31,7 +31,7 @@ export type EventResponse = {
   venue: VenueResponse;
 };
 
-export type CreateEventBody = {
+export type EventInput = {
   title?: string;
   description?: string;
   category?: string;
@@ -41,7 +41,6 @@ export type CreateEventBody = {
   price?: number;
   capacity?: number;
   venueId?: string;
-  createdById?: string; // TODO: replace with auth session user
 };
 
 export type EventValidationErrors = {
