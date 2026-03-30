@@ -39,7 +39,7 @@ export default function Home() {
           </div>
           
           <div className="bg-white/10 p-4 rounded-lg">
-            <h3 className="font-bold mb-1">Aeg ja koht:</h3>
+            <h3 className="font-bold mb-1">Time and place:</h3>
             <p className="text-sm">15. detsember, 19:00 @ TalTech Aula</p>
           </div>
 
@@ -50,11 +50,11 @@ export default function Home() {
 
         {/* PAREM POOL: Osaleja andmed ja Stripe */}
         <div className="bg-white text-slate-900 p-8 rounded-lg shadow-inner">
-          <h2 className="text-xl font-bold mb-6">Registreerimine</h2>
+          <h2 className="text-xl font-bold mb-6">Registration</h2>
           
           <div className="space-y-4 mb-8">
             <div>
-              <label className="block text-sm font-medium mb-1">Täisnimi</label>
+              <label className="block text-sm font-medium mb-1">Full name</label>
               <input 
                 type="text" 
                 placeholder="Mari Tamm"

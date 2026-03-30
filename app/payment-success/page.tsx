@@ -5,7 +5,7 @@ export default async function PaymentSuccess({
 }) {
   const { amount, ticketNumber, eventId, email } = await searchParams;
 
-  // Kui ticketNumber puudub, genereerime juhusliku koodi (nt: TKT-123456)
+ 
   const generatedTicket = ticketNumber || `TKT-${Math.random().toString(36).toUpperCase().substring(2, 8)}`;
 
   return (
@@ -27,7 +27,7 @@ export default async function PaymentSuccess({
             </div>
             <div className="text-right">
               <p className="text-[10px] uppercase text-gray-400">Summa</p>
-              <p className="font-bold text-green-600">${amount}</p>
+              <p className="font-bold text-green-600">€{amount}</p>
             </div>
           </div>
         </div>
