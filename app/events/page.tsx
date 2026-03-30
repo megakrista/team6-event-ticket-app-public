@@ -1,5 +1,9 @@
 import { listEvents } from "@/services/eventservices";
+import { getSessionByToken } from "@/services/sessionservices";
 import { type EventResponse } from "@/types/eventtype";
+import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 type EventCard = {
   id: string;
@@ -84,6 +88,15 @@ function toEventCards(events: EventResponse[]): EventCard[] {
 }
 
 export default async function EventsPage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+  const activeSession = await getSessionByToken(token);
+
+  if (!activeSession) {
+    redirect("/login");
+  }
+
   let events: EventResponse[] = [];
   let hasLoadError = false;
 
@@ -99,18 +112,18 @@ export default async function EventsPage() {
   return (
     <main className="min-h-screen bg-zinc-50 px-6 py-10">
       <section className="mx-auto max-w-6xl">
-        <div className="mb-8 flex items-end justify-between gap-4">
-          <div>
-            <p className="mb-2 text-sm font-medium uppercase tracking-wide text-blue-700">
-              Event Ticket App
-            </p>
-            <h1 className="text-3xl font-bold text-zinc-900">Events</h1>
-            <p className="mt-2 text-zinc-600">
-              Browse upcoming events and pick your next ticket.
-            </p>
-          </div>
-          <div className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
-            {eventCards.length} event{eventCards.length === 1 ? "" : "s"}
+        <div className="mb-8 space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-zinc-900">Events</h1>
+              <p className="mt-2 text-zinc-600">
+                Browse upcoming events and pick your next ticket.
+              </p>
+            </div>
+
+            <div className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              {eventCards.length} event{eventCards.length === 1 ? "" : "s"}
+            </div>
           </div>
         </div>
 
