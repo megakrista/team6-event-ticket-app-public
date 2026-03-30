@@ -15,7 +15,8 @@ function convertToSubcurrency(amount: number, factor = 100) {
 }
 
 export default function Home() {
-  const amount = 49.99;
+  const amount = 60;
+
   
   // Vormi staatus
   const [formData, setFormData] = useState({
@@ -74,16 +75,17 @@ export default function Home() {
 
           <hr className="my-6 border-slate-200" />
 
-          <Elements
-            stripe={stripePromise}
-            options={{
-              mode: "payment",
-              amount: convertToSubcurrency(amount),
-              currency: "usd",
-            }}
-          >
-            <CheckoutPage amount={amount} />
-          </Elements>
+        <Elements
+  stripe={stripePromise}
+  options={{
+    mode: "payment",
+    amount: convertToSubcurrency(amount),
+    currency: "usd",
+  }}
+>
+  <CheckoutPage amount={amount} />
+</Elements>
+
         </div>
 
       </div>

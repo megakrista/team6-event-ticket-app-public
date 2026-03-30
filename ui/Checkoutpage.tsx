@@ -25,7 +25,7 @@ const CheckoutPage = ({ amount }: { amount: number }) => {
         "Content-Type": "application/json",
       },
 
-      body: JSON.stringify({ amount: convertToSubcurrency(amount) }),
+      body: JSON.stringify({ amount: convertToSubcurrency(amount)}),
     })
       .then((res) => res.json())
       .then((data) => setClientSecret(data.clientSecret));
@@ -55,14 +55,7 @@ const CheckoutPage = ({ amount }: { amount: number }) => {
       },
     });
 
-    if (error) {
-      // This point is only reached if there's an immediate error when
-      // confirming the payment. Show the error to your customer (for example, payment details incomplete)
-      setErrorMessage(error.message);
-    } else {
-      // The payment UI automatically closes with a success animation.
-      // Your customer is redirected to your `return_url`.
-    }
+
 
     setLoading(false);
   };

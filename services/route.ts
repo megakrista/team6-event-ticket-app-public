@@ -1,9 +1,9 @@
 
-import { TicketInput } from "../types/tickettype";
+
 import { NextRequest, NextResponse } from "next/server";
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 import Stripe from 'stripe';
-import { prisma } from '@/prisma';
+import prisma  from '@/lib/prisma';
 
 export async function convertToSubcurrency(amount: number, factor = 100) {
   return Math.round(amount * factor);
@@ -37,41 +37,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
     }
 
-    // 4. Loome Stripe PaymentIntent ja pileti numbri
-    const ticketNumber = `TICKET-${Math.random().toString(36).toUpperCase().substring(2, 10)}`;
     
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount,
       currency: "eur",
       automatic_payment_methods: { enabled: true },
-      metadata: { 
-        ticket_number: ticketNumber, 
-        event_id: id, 
-        attendeeEmail 
-      },
     });
 
-    // 5. Salvestame pileti andmebaasi PENDING staatusega
-    const ticket = await prisma.ticket.create({
-      data: {
-        ticketNumber: ticketNumber,
-        attendeeName: attendeeName,
-        attendeeEmail: attendeeEmail,
-        ticketPrice: amount / 100,
-        stripeSessionId: paymentIntent.id,
-        status: "PENDING",
-        eventId: id, 
-      },
-    });
+  
+    // const ticket = await prisma.ticket.create({
+    //   data: {
+    //     ticketNumber: ticketNumber,
+    //     attendeeName: attendeeName,
+    //     attendeeEmail: attendeeEmail,
+    //     ticketPrice: amount / 100,
+    //     stripeSessionId: paymentIntent.id,
+    //     status: "PENDING",
+    //     eventId: id, 
+    //   },
+    // });
 
     return NextResponse.json({ 
-      clientSecret: paymentIntent.client_secret, 
-      ticketId: ticket.id,
-      ticketNumber: ticket.ticketNumber 
+      clientSecret: paymentIntent.client_secret
     });
 
   } catch (error: any) {
     console.error("Viga makse loomisel:", error);
     return NextResponse.json({ error: error.message || "Serveri viga" }, { status: 500 });
   }
-} // <--- See sulg lõpetab funktsiooni
+
