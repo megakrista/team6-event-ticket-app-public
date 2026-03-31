@@ -31,7 +31,7 @@ export type EventResponse = {
   venue: VenueResponse;
 };
 
-export type CreateEventBody = {
+export type EventInput = {
   title?: string;
   description?: string;
   category?: string;

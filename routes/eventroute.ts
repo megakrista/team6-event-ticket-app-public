@@ -1,9 +1,25 @@
-import { createEvent, getEventById, listEvents } from "@/services/eventservices";
+import {
+  createEvent,
+  getEventById,
+  listEvents,
+  updateEvent,
+  type EventWriteResult,
+} from "@/services/eventservices";
 import { success, error, validationError } from "@/lib/api-response";
-import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
-import { getSessionByToken } from "@/services/sessionservices";
-import { type CreateEventBody } from "@/types/eventtype";
-import { cookies } from "next/headers";
+import { requireAdmin } from "@/lib/auth-helpers";
+import { type EventInput } from "@/types/eventtype";
+
+function toEventWriteResponse(result: EventWriteResult) {
+  if ("validationErrors" in result) {
+    return validationError(result.validationErrors);
+  }
+
+  if ("error" in result) {
+    return error(result.error, result.status);
+  }
+
+  return success({ event: result.event }, result.status);
+}
 
 export async function getEventsRoute() {
   try {
@@ -15,37 +31,22 @@ export async function getEventsRoute() {
 }
 
 export async function postEventRoute(request: Request) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const sessionResult = await getSessionByToken(token);
-
-  if (!sessionResult) {
-    return error("Unauthorized", 401);
+  const adminResult = await requireAdmin();
+  if (!adminResult.ok) {
+    return adminResult.response;
   }
 
-  if (sessionResult.user.role !== "ADMIN") {
-    return error("Forbidden", 403);
-  }
-
-  let body: CreateEventBody;
+  let body: EventInput;
 
   try {
-    body = (await request.json()) as CreateEventBody;
+    body = (await request.json()) as EventInput;
   } catch {
     return error("Invalid JSON body", 400);
   }
 
-  const result = await createEvent(body, sessionResult.user.id);
+  const result = await createEvent(body, adminResult.session.user.id);
 
-  if (result.validationErrors) {
-    return validationError(result.validationErrors);
-  }
-
-  if (result.error) {
-    return error(result.error, result.status);
-  }
-
-  return success({ event: result.event }, 201);
+  return toEventWriteResponse(result);
 }
 
 export async function getEventByIdRoute(
@@ -60,4 +61,27 @@ export async function getEventByIdRoute(
   }
 
   return success({ event: result.event });
+}
+
+export async function putEventByIdRoute(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const adminResult = await requireAdmin();
+  if (!adminResult.ok) {
+    return adminResult.response;
+  }
+
+  let body: EventInput;
+
+  try {
+    body = (await request.json()) as EventInput;
+  } catch {
+    return error("Invalid JSON body", 400);
+  }
+
+  const { id } = await params;
+  const result = await updateEvent(id, body);
+
+  return toEventWriteResponse(result);
 }
