@@ -1,5 +1,3 @@
-
-
 import { NextRequest, NextResponse } from "next/server";
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 import Stripe from 'stripe';
@@ -11,15 +9,11 @@ export async function POST(request: NextRequest) {
 
 const paymentIntent = await stripe.paymentIntents.create({
   amount: amount,
-  currency: "usd",
+  currency: "eur",
   automatic_payment_methods: {
     enabled: true,
   },
 
-  metadata: {
- //   attendee: attendeeName,
-    event_id: id 
-  },
 });
 
 
@@ -29,7 +23,7 @@ const paymentIntent = await stripe.paymentIntents.create({
     });
 
   } catch (error: any) {
-    console.error("Viga makse loomisel:", error);
-    return NextResponse.json({ error: error.message || "viga" }, { status: 500 });
+    console.error("payment error:", error);
+    return NextResponse.json({ error: error.message || "error" }, { status: 500 });
   }
 }

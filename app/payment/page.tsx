@@ -19,7 +19,7 @@ export default function Home() {
   const amount = 60;
 
   
-  // Vormi staatus
+ 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -29,7 +29,7 @@ export default function Home() {
     <main className="max-w-6xl mx-auto p-6 md:p-10 text-white border m-4 md:m-10 rounded-xl bg-gradient-to-tr from-blue-600 to-purple-600 shadow-2xl">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
         
-        {/* VASAK POOL: Ürituse kirjeldus */}
+       
         <div className="text-left space-y-6">
           <div>
             <h1 className="text-4xl font-extrabold mb-2">TalTech Gala 2024</h1>
@@ -81,7 +81,7 @@ export default function Home() {
   options={{
     mode: "payment",
     amount: convertToSubcurrency(amount),
-    currency: "usd",
+    currency: "eur",
   }}
 >
   <CheckoutPage amount={amount} />
