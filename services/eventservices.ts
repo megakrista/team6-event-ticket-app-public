@@ -1,11 +1,24 @@
-import { Prisma } from "@/app/generated/prisma";
+import { EventStatus, Prisma } from "@/app/generated/prisma";
 import prisma from "@/lib/prisma";
 import {
   VALID_CATEGORIES,
   type EventInput,
+  type EventCategory,
   type EventResponse,
   type EventValidationErrors,
 } from "@/types/eventtype";
+
+export const EVENTS_PER_PAGE = 9;
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export type ListEventsParams = {
+  search?: string;
+  category?: string;
+  dateFrom?: string;
+  page?: number;
+};
 
 const EVENT_INCLUDE = {
   venue: true,
@@ -185,7 +198,7 @@ export async function createEvent(
         endsAt: new Date(body.endsAt!),
         price: body.price!,
         capacity: body.capacity!,
-        status: "DRAFT",
+        status: EventStatus.DRAFT,
         venueId: body.venueId!,
         createdById,
       },
@@ -219,6 +232,10 @@ export async function updateEvent(
 
 
 export async function getEventById(id: string) {
+  if (!UUID_RE.test(id)) {
+    return { status: 404, error: "Event not found" };
+  }
+
   const event = await prisma.event.findUnique({
     where: { id },
     include: EVENT_INCLUDE,
@@ -231,11 +248,41 @@ export async function getEventById(id: string) {
   return { status: 200, event: validateEventInput(event) };
 }
 
-export async function listEvents(): Promise<EventResponse[]> {
-  const rawEvents = await prisma.event.findMany({
-    include: EVENT_INCLUDE,
-    orderBy: { startsAt: "asc" },
-  });
+export async function listEvents(
+  params: ListEventsParams = {},
+): Promise<{ events: EventResponse[]; total: number }> {
+  const page = Math.max(1, Number.isFinite(params.page) ? params.page! : 1);
+  const skip = (page - 1) * EVENTS_PER_PAGE;
+  const dateFrom = params.dateFrom ? new Date(params.dateFrom + "T00:00:00.000Z") : null;
 
-  return rawEvents.map((event) => validateEventInput(event));
+  const where: Prisma.EventWhereInput = {
+    status: EventStatus.PUBLISHED,
+    ...(params.search && {
+      OR: [
+        { title: { contains: params.search, mode: "insensitive" } },
+        { description: { contains: params.search, mode: "insensitive" } },
+        { venue: { name: { contains: params.search, mode: "insensitive" } } },
+        { venue: { address: { contains: params.search, mode: "insensitive" } } },
+      ],
+    }),
+    ...(params.category && VALID_CATEGORIES.includes(params.category as EventCategory) && {
+      category: params.category,
+    }),
+    ...(dateFrom && !isNaN(dateFrom.getTime()) && {
+      startsAt: { gte: dateFrom },
+    }),
+  };
+
+  const [rawEvents, total] = await Promise.all([
+    prisma.event.findMany({
+      where,
+      include: EVENT_INCLUDE,
+      orderBy: { startsAt: "asc" },
+      skip,
+      take: EVENTS_PER_PAGE,
+    }),
+    prisma.event.count({ where }),
+  ]);
+
+  return { events: rawEvents.map((event) => validateEventInput(event)), total };
 }

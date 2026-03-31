@@ -1,10 +1,14 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
-import { listEvents } from "@/services/eventservices";
+import { Suspense } from "react";
+import Link from "next/link";
+import { listEvents, EVENTS_PER_PAGE } from "@/services/eventservices";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
 import { getSessionByToken } from "@/services/sessionservices";
 import { type EventResponse } from "@/types/eventtype";
-import { redirect } from "next/navigation";
+import EventFilterBar from "@/ui/components/EventFilterBar";
+import Pagination from "@/ui/components/Pagination";
+import { capitalize, formatDateTime, formatPrice } from "@/lib/format-helpers";
+import EventImage from "@/ui/components/EventImage";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +20,7 @@ type EventCard = {
   category: string;
   price: number;
   venueName: string;
+  imageUrl: string | null;
 };
 
 const DEMO_EVENTS: EventCard[] = [
@@ -28,6 +33,7 @@ const DEMO_EVENTS: EventCard[] = [
     category: "concert",
     price: 29.9,
     venueName: "Noblessner Port Stage",
+    imageUrl: null,
   },
   {
     id: "demo-2",
@@ -38,6 +44,7 @@ const DEMO_EVENTS: EventCard[] = [
     category: "conference",
     price: 0,
     venueName: "Tallinn Creative Hub",
+    imageUrl: null,
   },
   {
     id: "demo-3",
@@ -48,27 +55,9 @@ const DEMO_EVENTS: EventCard[] = [
     category: "sports",
     price: 18.5,
     venueName: "Kadriorg Arena",
+    imageUrl: null,
   },
 ];
-
-function formatStartsAt(value: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
-function formatPrice(value: number) {
-  if (value <= 0) {
-    return "Free";
-  }
-
-  return new Intl.NumberFormat("en-EE", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 function getShortDescription(text: string) {
   if (text.length <= 140) {
@@ -87,29 +76,62 @@ function toEventCards(events: EventResponse[]): EventCard[] {
     category: event.category,
     price: event.price,
     venueName: event.venue.name,
+    imageUrl: event.imageUrl,
   }));
 }
 
-export default async function EventsPage() {
+function firstParam(v: string | string[] | undefined): string | undefined {
+  return Array.isArray(v) ? v[0] : v;
+}
+
+type EventsPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function EventsPage({ searchParams }: EventsPageProps) {
+  const raw = await searchParams;
+  const filters = {
+    search: firstParam(raw.search),
+    category: firstParam(raw.category),
+    dateFrom: firstParam(raw.dateFrom),
+  };
+  const page = Math.max(1, parseInt(firstParam(raw.page) ?? "1", 10) || 1);
+
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const sessionResult = await getSessionByToken(token);
-  if (!sessionResult) {
-    redirect("/login");
-  }
-
-  let events: EventResponse[] = [];
-  let hasLoadError = false;
   const isAdmin = sessionResult?.user.role === "ADMIN";
 
+  let events: EventResponse[] = [];
+  let total = 0;
+  let hasLoadError = false;
+
   try {
-    events = await listEvents();
+    const result = await listEvents({ ...filters, page });
+    events = result.events;
+    total = result.total;
   } catch {
     hasLoadError = true;
   }
 
-  const hasDemoData = !hasLoadError && events.length === 0;
+  const hasActiveFilters = !!(
+    filters.search ||
+    filters.category ||
+    filters.dateFrom
+  );
+  const hasDemoData = !hasLoadError && total === 0 && !hasActiveFilters;
   const eventCards = hasDemoData ? DEMO_EVENTS : toEventCards(events);
+  const totalPages = Math.ceil(total / EVENTS_PER_PAGE);
+
+  function buildPaginationHref(p: number) {
+    const params = new URLSearchParams();
+    if (filters.search) params.set("search", filters.search);
+    if (filters.category) params.set("category", filters.category);
+    if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+    if (p > 1) params.set("page", String(p));
+    const qs = params.toString();
+    return qs ? `/events?${qs}` : "/events";
+  }
 
   return (
     <main className="min-h-screen bg-zinc-50 px-6 py-10">
@@ -149,47 +171,116 @@ export default async function EventsPage() {
 
         {hasDemoData ? (
           <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            Showing demo events for UI preview. Real events will appear here once
-            they are created in the database.
+            Showing demo events for UI preview. Real events will appear here
+            once they are created in the database.
+          </div>
+        ) : null}
+
+        {!hasDemoData && (
+          <Suspense
+            fallback={
+              <div className="mb-6 h-20 animate-pulse rounded-xl bg-zinc-100" />
+            }
+          >
+            <EventFilterBar />
+          </Suspense>
+        )}
+
+        {!hasLoadError && events.length === 0 && hasActiveFilters ? (
+          <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center text-zinc-500">
+            No events match your filters.
           </div>
         ) : null}
 
         {!hasLoadError && eventCards.length > 0 ? (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {eventCards.map((event) => (
-              <article
-                key={event.id}
-                className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
-              >
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700">
-                    {event.category}
-                  </span>
-                  <span className="text-sm font-semibold text-blue-700">
-                    {formatPrice(event.price)}
-                  </span>
-                </div>
-
-                <h2 className="mb-2 text-lg font-semibold text-zinc-900">
-                  {event.title}
-                </h2>
-                <p className="mb-4 text-sm text-zinc-600">
-                  {getShortDescription(event.description)}
-                </p>
-
-                <div className="space-y-1 text-sm text-zinc-700">
-                  <p>
-                    <span className="font-medium">Starts:</span>{" "}
-                    {formatStartsAt(event.startsAt)}
+            {eventCards.map((event) =>
+              hasDemoData ? (
+                <article
+                  key={event.id}
+                  className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
+                >
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700">
+                      {capitalize(event.category)}
+                    </span>
+                    <span className="text-sm font-semibold text-blue-700">
+                      {formatPrice(event.price)}
+                    </span>
+                  </div>
+                  <h2 className="mb-2 line-clamp-2 text-lg font-semibold text-zinc-900">
+                    {event.title}
+                  </h2>
+                  <p className="mb-4 text-sm text-zinc-600">
+                    {getShortDescription(event.description)}
                   </p>
-                  <p>
-                    <span className="font-medium">Venue:</span> {event.venueName}
-                  </p>
-                </div>
-              </article>
-            ))}
+                  <div className="space-y-1 text-sm text-zinc-700">
+                    <p>
+                      <span className="font-medium">Starts:</span>{" "}
+                      {formatDateTime(event.startsAt)}
+                    </p>
+                    <p>
+                      <span className="font-medium">Venue:</span>{" "}
+                      {event.venueName}
+                    </p>
+                  </div>
+                </article>
+              ) : (
+                <Link
+                  key={event.id}
+                  href={`/events/${event.id}`}
+                  className="block rounded-xl border border-zinc-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <article>
+                    <div className="overflow-hidden rounded-t-xl">
+                      <EventImage
+                        src={event.imageUrl}
+                        alt={event.title}
+                        className="h-40 w-full object-cover"
+                      />
+                    </div>
+                    <div className="p-5">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700">
+                          {capitalize(event.category)}
+                        </span>
+                        <span className="text-sm font-semibold text-blue-700">
+                          {formatPrice(event.price)}
+                        </span>
+                      </div>
+                      <h2 className="mb-2 line-clamp-2 text-lg font-semibold text-zinc-900">
+                        {event.title}
+                      </h2>
+                      <p className="mb-4 text-sm text-zinc-600">
+                        {getShortDescription(event.description)}
+                      </p>
+                      <div className="space-y-1 text-sm text-zinc-700">
+                        <p>
+                          <span className="font-medium">Starts:</span>{" "}
+                          {formatDateTime(event.startsAt)}
+                        </p>
+                        <p>
+                          <span className="font-medium">Venue:</span>{" "}
+                          {event.venueName}
+                        </p>
+                      </div>
+                    </div>
+                  </article>
+                </Link>
+              ),
+            )}
           </div>
         ) : null}
+
+        {!hasDemoData && totalPages > 1 && (
+          <div className="mt-8">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              buildHref={buildPaginationHref}
+            />
+          </div>
+        )}
       </section>
     </main>
   );

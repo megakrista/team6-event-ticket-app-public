@@ -2,6 +2,7 @@ import {
   createEvent,
   getEventById,
   listEvents,
+  ListEventsParams,
   updateEvent,
   type EventWriteResult,
 } from "@/services/eventservices";
@@ -21,10 +22,19 @@ function toEventWriteResponse(result: EventWriteResult) {
   return success({ event: result.event }, result.status);
 }
 
-export async function getEventsRoute() {
+export async function getEventsRoute(request: Request) {
   try {
-    const events = await listEvents();
-    return success({ events });
+    const { searchParams } = new URL(request.url);
+    const params: ListEventsParams = {
+      search: searchParams.get("search") ?? undefined,
+      category: searchParams.get("category") ?? undefined,
+      dateFrom: searchParams.get("dateFrom") ?? undefined,
+      page: searchParams.has("page")
+        ? parseInt(searchParams.get("page")!, 10)
+        : undefined,
+    };
+    const { events, total } = await listEvents(params);
+    return success({ events, total });
   } catch {
     return error("Failed to fetch events", 500);
   }

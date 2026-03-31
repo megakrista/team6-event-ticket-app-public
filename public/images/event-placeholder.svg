@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="event-ph-bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e4e4e7"/>
+      <stop offset="1" stop-color="#d4d4d8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#event-ph-bg)"/>
+  <g opacity="0.35" stroke="#71717a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="480" y="200" width="240" height="230" rx="12" fill="none"/>
+    <path d="M520 250h160M520 290h160M520 330h120" stroke-width="2"/>
+    <circle cx="600" cy="155" r="28" fill="none"/>
+  </g>
+</svg>
