@@ -1,6 +1,11 @@
 import { PrismaClient } from "@/app/generated/prisma";
 import { PrismaPg } from "@prisma/adapter-pg";
 
+const prismaClientSingleton = () => {
+  return new PrismaClient();
+};
+
+
 const globalForPrisma = global as unknown as {
     prisma: PrismaClient;
 };

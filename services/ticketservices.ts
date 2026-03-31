@@ -4,56 +4,39 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 import Stripe from 'stripe';
 import prisma from "@/lib/prisma";
 
-export async function convertToSubcurrency(amount: number, factor = 100) {
+
+export function convertToSubcurrency(amount: number, factor = 100) {
   return Math.round(amount * factor);
 }
 
 
-
-export async function POST(request: NextRequest) {
+export async function saveTicketToDatabase(data: {
+  amount: number;
+  ticketNumber: string;
+  eventId: string;
+  email: string;        
+  attendeeName: string;
+  paymentIntentId: string;
+}) {
   try {
-
-    const body = await request.json();
-    const { id, amount, attendeeEmail, attendeeName } = body;
-
-    if (!id || !attendeeName || !attendeeEmail || !amount) {
-      return NextResponse.json({ success: false, message: "Missing fields" }, { status: 400 });
-    }
-
-
-
-const paymentIntent = await stripe.paymentIntents.create({
-  amount: "3232",
-  currency: "eur",
-  automatic_payment_methods: { enabled: true },
-  metadata: { 
-    ticket_number: "232", 
-    event_id: id, 
-    attendeeEmail 
-  },
-});
-
-
-console.log("Sessioon loodud piletiga:", paymentIntent.metadata.ticket_number || "puudub");
-
-    // const ticket = await prisma.ticket.create({
-    //   data: {
-    //     ticketNumber: ticketNumber,
-    //     attendeeName: attendeeName,
-    //     attendeeEmail: attendeeEmail,
-    //     ticketPrice: amount / 100,
-    //     stripeSessionId: paymentIntent.id,
-    //     status: "PENDING",
-    //     eventId: id,
-    //   },
-    // });
-
-    return NextResponse.json({ 
-      clientSecret: paymentIntent.client_secret
+    const ticket = await prisma.ticket.create({
+      data: {
+        ticketNumber: data.ticketNumber,
+        eventId: data.eventId,
+        attendeeEmail: data.email,
+        attendeeName: data.attendeeName,
+        amount: data.amount,
+        paymentIntentId: data.paymentIntentId,
+        status: "PAID",
+      },
     });
-
-  } catch (error: any) {
-    console.error("Error:", error);
-    return NextResponse.json({ error: error.message || "Error" }, { status: 500 });
+    return ticket;
+  } catch (error) {
+    console.error("Viga salvestamisel:", error);
+    throw error;
   }
 }
+
+
+
+

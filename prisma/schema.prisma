@@ -62,27 +62,17 @@ model Event {
   createdBy   User        @relation(fields: [createdById], references: [id])
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  tickets     ticket[]
 
   @@index([status, startsAt])
   @@index([status, category, startsAt])
 }
 
-
-model ticket {
-  id              String   @id @default(cuid())
-  ticketNumber    String   @unique
-  attendeeName    String
-  attendeeEmail   String
-  amount          Float
-  status          String   @default("PENDING") // PENDING, PAID, CANCELLED
-  paymentIntentId String   @unique
-  
-
-  eventId         String
-  event           Event    @relation(fields: [eventId], references: [id])
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
 }
 
 model Session {
@@ -96,4 +86,20 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model ticket {
+  id              String @id @default(cuid())
+  ticketNumber    String @unique
+  attendeeName    String
+  attendeeEmail   String
+  amount          Float
+  status          String @default("PENDING") // PENDING, PAID, CANCELLED
+  paymentIntentId String @unique
+
+  eventId String @db.Uuid
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

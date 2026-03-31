@@ -1,18 +1,19 @@
-"use client";
+"use client"; 
 
 import CheckoutPage from "@/ui/Checkoutpage";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { useState } from "react";
 
+const convertToSubcurrency = (amount: number, factor = 100) => {
+  return Math.round(amount * factor);
+};
+
+
 if (process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY === undefined) {
   throw new Error("NEXT_PUBLIC_STRIPE_PUBLIC_KEY is not defined");
 }
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY);
-
-function convertToSubcurrency(amount: number, factor = 100) {
-  return Math.round(amount * factor);
-}
 
 export default function Home() {
   const amount = 60;
@@ -48,7 +49,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* PAREM POOL: Osaleja andmed ja Stripe */}
+
         <div className="bg-white text-slate-900 p-8 rounded-lg shadow-inner">
           <h2 className="text-xl font-bold mb-6">Registration</h2>
           
