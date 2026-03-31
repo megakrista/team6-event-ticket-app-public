@@ -37,9 +37,9 @@ type EventWriteSuccess = {
   event: EventResponse;
 };
 
-type EventWriteResult = EventValidationFailure | EventWriteError | EventWriteSuccess;
+export type EventWriteResult = EventValidationFailure | EventWriteError | EventWriteSuccess;
 
-function serializeEvent(event: EventWithVenue): EventResponse {
+function validateEventInput(event: EventWithVenue): EventResponse {
   return {
     ...event,
     price: Number(event.price),
@@ -164,7 +164,7 @@ async function runEventWrite(
 
   try {
     const event = await op();
-    return { status: successStatus, event: serializeEvent(event) };
+    return { status: successStatus, event: validateEventInput(event) };
   } catch (err) {
     return mapEventWriteError(err);
   }
@@ -228,7 +228,7 @@ export async function getEventById(id: string) {
     return { status: 404, error: "Event not found" };
   }
 
-  return { status: 200, event: serializeEvent(event) };
+  return { status: 200, event: validateEventInput(event) };
 }
 
 export async function listEvents(): Promise<EventResponse[]> {
@@ -237,5 +237,5 @@ export async function listEvents(): Promise<EventResponse[]> {
     orderBy: { startsAt: "asc" },
   });
 
-  return rawEvents.map((event) => serializeEvent(event));
+  return rawEvents.map((event) => validateEventInput(event));
 }
