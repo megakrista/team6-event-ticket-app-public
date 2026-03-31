@@ -1,9 +1,12 @@
+import Link from "next/link";
+import { cookies } from "next/headers";
 import { listEvents } from "@/services/eventservices";
+import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
 import { getSessionByToken } from "@/services/sessionservices";
 import { type EventResponse } from "@/types/eventtype";
-import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 
 type EventCard = {
   id: string;
@@ -90,15 +93,14 @@ function toEventCards(events: EventResponse[]): EventCard[] {
 export default async function EventsPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
-  const activeSession = await getSessionByToken(token);
-
-  if (!activeSession) {
+  const sessionResult = await getSessionByToken(token);
+  if (!sessionResult) {
     redirect("/login");
   }
 
   let events: EventResponse[] = [];
   let hasLoadError = false;
+  const isAdmin = sessionResult?.user.role === "ADMIN";
 
   try {
     events = await listEvents();
@@ -115,14 +117,26 @@ export default async function EventsPage() {
         <div className="mb-8 space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
+              <p className="mb-2 text-sm font-medium uppercase tracking-wide text-blue-700">
+                Event Ticket App
+              </p>
               <h1 className="text-3xl font-bold text-zinc-900">Events</h1>
               <p className="mt-2 text-zinc-600">
                 Browse upcoming events and pick your next ticket.
               </p>
             </div>
-
-            <div className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
-              {eventCards.length} event{eventCards.length === 1 ? "" : "s"}
+            <div className="flex items-center gap-3">
+              <div className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                {eventCards.length} event{eventCards.length === 1 ? "" : "s"}
+              </div>
+              {isAdmin ? (
+                <Link
+                  href="/admin/events/create"
+                  className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Create event
+                </Link>
+              ) : null}
             </div>
           </div>
         </div>

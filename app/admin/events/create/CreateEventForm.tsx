@@ -36,7 +36,7 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function buildPayload(form: FormState, userId: string) {
+function buildPayload(form: FormState) {
   return {
     title: form.title,
     description: form.description,
@@ -47,7 +47,6 @@ function buildPayload(form: FormState, userId: string) {
     capacity: form.capacity ? parseInt(form.capacity, 10) : undefined,
     price: form.price ? parseFloat(form.price) : undefined,
     imageUrl: form.imageUrl || undefined,
-    createdById: userId,
   };
 }
 
@@ -57,7 +56,7 @@ function isFormDirty(form: FormState): boolean {
   );
 }
 
-export default function CreateEventForm({ userId }: { userId: string }) {
+export default function CreateEventForm() {
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -118,7 +117,7 @@ export default function CreateEventForm({ userId }: { userId: string }) {
       const response = await fetch(API_ROUTES.events, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildPayload(form, userId)),
+        body: JSON.stringify(buildPayload(form)),
       });
 
       const data = await response.json().catch(() => ({}));
