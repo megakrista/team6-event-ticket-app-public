@@ -1,6 +1,25 @@
-import { createEvent, getEventById, listEvents } from "@/services/eventservices";
+import {
+  createEvent,
+  getEventById,
+  listEvents,
+  updateEvent,
+  type EventWriteResult,
+} from "@/services/eventservices";
 import { success, error, validationError } from "@/lib/api-response";
-import { type CreateEventBody } from "@/types/eventtype";
+import { requireAdmin } from "@/lib/auth-helpers";
+import { type EventInput } from "@/types/eventtype";
+
+function toEventWriteResponse(result: EventWriteResult) {
+  if ("validationErrors" in result) {
+    return validationError(result.validationErrors);
+  }
+
+  if ("error" in result) {
+    return error(result.error, result.status);
+  }
+
+  return success({ event: result.event }, result.status);
+}
 
 export async function getEventsRoute() {
   try {
@@ -12,25 +31,22 @@ export async function getEventsRoute() {
 }
 
 export async function postEventRoute(request: Request) {
-  let body: CreateEventBody;
+  const adminResult = await requireAdmin();
+  if (!adminResult.ok) {
+    return adminResult.response;
+  }
+
+  let body: EventInput;
 
   try {
-    body = (await request.json()) as CreateEventBody;
+    body = (await request.json()) as EventInput;
   } catch {
     return error("Invalid JSON body", 400);
   }
 
-  const result = await createEvent(body);
+  const result = await createEvent(body, adminResult.session.user.id);
 
-  if (result.validationErrors) {
-    return validationError(result.validationErrors);
-  }
-
-  if (result.error) {
-    return error(result.error, result.status);
-  }
-
-  return success({ event: result.event }, 201);
+  return toEventWriteResponse(result);
 }
 
 export async function getEventByIdRoute(
@@ -45,4 +61,27 @@ export async function getEventByIdRoute(
   }
 
   return success({ event: result.event });
+}
+
+export async function putEventByIdRoute(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const adminResult = await requireAdmin();
+  if (!adminResult.ok) {
+    return adminResult.response;
+  }
+
+  let body: EventInput;
+
+  try {
+    body = (await request.json()) as EventInput;
+  } catch {
+    return error("Invalid JSON body", 400);
+  }
+
+  const { id } = await params;
+  const result = await updateEvent(id, body);
+
+  return toEventWriteResponse(result);
 }
