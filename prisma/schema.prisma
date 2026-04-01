@@ -62,6 +62,9 @@ model Event {
   createdBy   User        @relation(fields: [createdById], references: [id])
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+  @@index([status, startsAt])
+  @@index([status, category, startsAt])
 }
 
 enum EventStatus {
