@@ -194,10 +194,7 @@ export async function createEvent(
   );
 }
 
-export async function updateEvent(
-  id: string,
-  body: EventInput,
-): Promise<EventWriteResult> {
+export async function updateEvent(id: string, body: EventInput): Promise<EventWriteResult> {
   return runEventWrite(body, 200, () =>
     prisma.event.update({
       where: { id },
@@ -217,6 +214,18 @@ export async function updateEvent(
   );
 }
 
+export async function deleteEvent(id: string): Promise<EventWriteResult> {
+  try {
+    const event = await prisma.event.delete({
+      where: { id },
+      include: EVENT_INCLUDE,
+    });
+
+    return { status: 200, event: validateEventInput(event) };
+  } catch (err) {
+    return mapEventWriteError(err);
+  }
+}
 
 export async function getEventById(id: string) {
   const event = await prisma.event.findUnique({

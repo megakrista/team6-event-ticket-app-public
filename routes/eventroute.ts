@@ -1,5 +1,6 @@
 import {
   createEvent,
+  deleteEvent,
   getEventById,
   listEvents,
   updateEvent,
@@ -82,6 +83,21 @@ export async function putEventByIdRoute(
 
   const { id } = await params;
   const result = await updateEvent(id, body);
+
+  return toEventWriteResponse(result);
+}
+
+export async function deleteEventByIdRoute(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const adminResult = await requireAdmin();
+  if (!adminResult.ok) {
+    return adminResult.response;
+  }
+
+  const { id } = await params;
+  const result = await deleteEvent(id);
 
   return toEventWriteResponse(result);
 }
