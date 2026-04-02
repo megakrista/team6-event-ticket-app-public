@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import {
   VALID_CATEGORIES,
   type EventInput,
+  type EventStatusInput,
   type EventCategory,
   type EventResponse,
   type EventValidationErrors,
@@ -12,6 +13,9 @@ export const EVENTS_PER_PAGE = 9;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+type UpdatableEventStatus =
+  | typeof EventStatus.DRAFT
+  | typeof EventStatus.PUBLISHED;
 
 export type ListEventsParams = {
   search?: string;
@@ -228,6 +232,56 @@ export async function updateEvent(
       include: EVENT_INCLUDE,
     }),
   );
+}
+
+function validateEventStatusBody(body: EventStatusInput): {
+  validationErrors: EventValidationErrors;
+  normalizedStatus: UpdatableEventStatus | null;
+} {
+  const validationErrors: EventValidationErrors = {};
+  const rawStatus = typeof body.status === "string" ? body.status.trim() : "";
+
+  if (!rawStatus) {
+    validationErrors.status = "Required";
+    return { validationErrors, normalizedStatus: null };
+  }
+
+  const normalizedStatus = rawStatus.toUpperCase();
+  if (
+    normalizedStatus !== EventStatus.DRAFT &&
+    normalizedStatus !== EventStatus.PUBLISHED
+  ) {
+    validationErrors.status = "Invalid status. Must be one of: draft, published";
+    return { validationErrors, normalizedStatus: null };
+  }
+
+  return { validationErrors, normalizedStatus };
+}
+
+export async function updateEventStatus(
+  id: string,
+  body: EventStatusInput,
+): Promise<EventWriteResult> {
+  if (!UUID_RE.test(id)) {
+    return { status: 404, error: "Event not found" };
+  }
+
+  const { validationErrors, normalizedStatus } = validateEventStatusBody(body);
+  if (Object.keys(validationErrors).length > 0 || !normalizedStatus) {
+    return { status: 400, validationErrors };
+  }
+
+  try {
+    const event = await prisma.event.update({
+      where: { id },
+      data: { status: normalizedStatus },
+      include: EVENT_INCLUDE,
+    });
+
+    return { status: 200, event: validateEventInput(event) };
+  } catch (err) {
+    return mapEventWriteError(err);
+  }
 }
 
 

@@ -43,6 +43,10 @@ export type EventInput = {
   venueId?: string;
 };
 
+export type EventStatusInput = {
+  status?: string;
+};
+
 export type EventValidationErrors = {
   [field: string]: string;
 };
