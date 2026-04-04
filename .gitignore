@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# Claude Code
+.claude/
+
+# Windows build artifacts
+NUL

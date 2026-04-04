@@ -102,6 +102,15 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 {event.description}
               </p>
             </div>
+
+            <div className="mt-8">
+              <Link
+                href={`/payment?eventId=${event.id}`}
+                className="inline-block rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+              >
+                Buy Ticket — {formatPrice(event.price)}
+              </Link>
+            </div>
           </div>
         </div>
       </section>

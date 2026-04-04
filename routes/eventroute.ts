@@ -66,7 +66,7 @@ export async function getEventByIdRoute(
   const { id } = await params;
   const result = await getEventById(id);
 
-  if (result.error) {
+  if ("error" in result) {
     return error(result.error, result.status);
   }
 
