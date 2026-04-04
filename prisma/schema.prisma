@@ -30,6 +30,7 @@ model User {
   deletedAt     DateTime?
   createdEvents Event[]
   sessions      Session[]
+  tickets       Ticket[]
 }
 
 model Venue {
@@ -62,7 +63,7 @@ model Event {
   createdBy   User        @relation(fields: [createdById], references: [id])
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  tickets     ticket[]
+  tickets     Ticket[]
 
   @@index([status, startsAt])
   @@index([status, category, startsAt])
@@ -73,6 +74,12 @@ enum EventStatus {
   PUBLISHED
   CANCELLED
   COMPLETED
+}
+
+enum TicketStatus {
+  PENDING
+  PAID
+  CANCELLED
 }
 
 model Session {
@@ -88,18 +95,20 @@ model Session {
   @@index([expiresAt])
 }
 
-model ticket {
-  id              String @id @default(cuid())
-  ticketNumber    String @unique
+model Ticket {
+  id              String       @id @default(uuid()) @db.Uuid
+  ticketNumber    String       @unique
   attendeeName    String
   attendeeEmail   String
   amount          Float
-  status          String @default("PENDING") // PENDING, PAID, CANCELLED
-  paymentIntentId String @unique
+  status          TicketStatus @default(PENDING)
+  paymentIntentId String       @unique
+  eventId         String       @db.Uuid
+  event           Event        @relation(fields: [eventId], references: [id])
+  userId          String?      @db.Uuid
+  user            User?        @relation(fields: [userId], references: [id])
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
-  eventId String @db.Uuid
-  event   Event  @relation(fields: [eventId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@index([eventId, status])
 }

@@ -1,21 +1,17 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  useStripe,
-  useElements,
-  PaymentElement,
-} from "@stripe/react-stripe-js";
+import { useStripe, useElements, PaymentElement } from "@stripe/react-stripe-js";
 
-
-const convertToSubcurrency = (amount: number, factor = 100) => {
-  return Math.round(amount * factor);
+type Props = {
+  amount: number;
+  name: string;
+  email: string;
+  eventId: string;
+  eventTitle: string;
 };
 
-const TEMP_EVENT_ID = "550e8400-e29b-41d4-a716-44665544000"; 
-const TEMP_EMAIL = "test@kasutaja.ee"; 
-
-const CheckoutPage = ({ amount }: { amount: number }) => {
+const CheckoutPage = ({ amount, name, email, eventId, eventTitle }: Props) => {
   const stripe = useStripe();
   const elements = useElements();
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -23,26 +19,19 @@ const CheckoutPage = ({ amount }: { amount: number }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
- 
     fetch("/api/payments", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        amount: convertToSubcurrency(amount), // Kasutab nüüd siinset funktsiooni
-        id: TEMP_EVENT_ID,
-        attendeeEmail: TEMP_EMAIL,
-        attendeeName: "Test Kasutaja",
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount }),
     })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.clientSecret) {
-          setClientSecret(data.clientSecret);
-        }
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
       })
-      .catch((err) => setErrorMessage("Makse algatamine ebaõnnestus"));
+      .then((data) => {
+        if (data.clientSecret) setClientSecret(data.clientSecret);
+      })
+      .catch(() => setErrorMessage("Failed to initialise payment"));
   }, [amount]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -62,26 +51,21 @@ const CheckoutPage = ({ amount }: { amount: number }) => {
       elements,
       clientSecret,
       confirmParams: {
-     
-        return_url: `${window.location.origin}/payment-success?amount=${amount}&eventId=${TEMP_EVENT_ID}&email=${encodeURIComponent(TEMP_EMAIL)}`,
+        return_url: `${window.location.origin}/payment-success?amount=${amount}&eventId=${eventId}&eventTitle=${encodeURIComponent(eventTitle)}&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}`,
       },
     });
 
-    if (error) {
-      setErrorMessage(error.message);
-    }
-
+    if (error) setErrorMessage(error.message);
     setLoading(false);
   };
 
   if (!clientSecret || !stripe || !elements) {
     return (
       <div className="flex items-center justify-center p-5">
-        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-e-transparent align-[-0.125em] text-surface motion-reduce:animate-[spin_1.5s_linear_infinite] dark:text-white" role="status">
-          <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">
-            Loading...
-          </span>
-        </div>
+        <div
+          className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-e-transparent"
+          role="status"
+        />
       </div>
     );
   }
@@ -96,7 +80,7 @@ const CheckoutPage = ({ amount }: { amount: number }) => {
         disabled={!stripe || loading}
         className="text-white w-full p-5 bg-black mt-4 rounded-md font-bold disabled:opacity-50 disabled:animate-pulse hover:bg-zinc-800 transition-all"
       >
-        {!loading ? `Pay €${amount}` : "Processing..."}
+        {!loading ? `Pay €${(amount / 100).toFixed(2)}` : "Processing..."}
       </button>
     </form>
   );

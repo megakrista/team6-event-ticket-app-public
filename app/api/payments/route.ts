@@ -1,29 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-import Stripe from 'stripe';
-import prisma from "@/lib/prisma";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(request: NextRequest) {
   try {
-    const { amount, attendeeEmail, attendeeName, id } = await request.json();
+    const { amount } = await request.json();
 
-const paymentIntent = await stripe.paymentIntents.create({
-  amount: amount,
-  currency: "eur",
-  automatic_payment_methods: {
-    enabled: true,
-  },
+    if (!Number.isInteger(amount) || amount <= 0) {
+      return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+    }
 
-});
-
-
-  
-    return NextResponse.json({ 
-      clientSecret: paymentIntent.client_secret
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: "eur",
+      automatic_payment_methods: { enabled: true },
     });
 
-  } catch (error: any) {
-    console.error("payment error:", error);
-    return NextResponse.json({ error: error.message || "error" }, { status: 500 });
+    return NextResponse.json({ clientSecret: paymentIntent.client_secret });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Payment error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
