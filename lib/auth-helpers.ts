@@ -25,3 +25,18 @@ export async function requireAdmin(): Promise<RequireAdminResult> {
 
   return { ok: true, session: sessionResult };
 }
+
+export async function getCurrentUser(): Promise<
+  | { ok: true; session: AuthenticatedSession }
+  | { ok: false; response: ReturnType<typeof error> }
+> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const sessionResult = await getSessionByToken(token);
+
+  if (!sessionResult) {
+    return { ok: false, response: error("Unauthorized", 401) };
+  }
+
+  return { ok: true, session: sessionResult };
+}

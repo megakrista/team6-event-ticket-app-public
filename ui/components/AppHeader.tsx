@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/ui/components/LogoutButton";
 
@@ -15,10 +16,21 @@ export default function AppHeader() {
   return (
     <header className="border-b border-zinc-200 bg-white">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-        <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
+        <Link
+          href="/events"
+          className="text-sm font-medium uppercase tracking-wide text-blue-700 hover:text-blue-900"
+        >
           Event Ticket App
-        </p>
-        <LogoutButton />
+        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/profile"
+            className="text-sm font-medium text-zinc-700 hover:text-zinc-900"
+          >
+            Profile
+          </Link>
+          <LogoutButton />
+        </div>
       </div>
     </header>
   );

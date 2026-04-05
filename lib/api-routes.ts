@@ -4,4 +4,6 @@ export const API_ROUTES = {
   eventById: (id: string) => `/api/events/${id}`,
   signup: "/api/auth/signup",
   login: "/api/auth/login",
+  userMe: "/api/users/me",
+  userById: (id: string) => `/api/users/${id}`,
 } as const;
