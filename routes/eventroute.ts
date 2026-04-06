@@ -4,11 +4,12 @@ import {
   listEvents,
   ListEventsParams,
   updateEvent,
+  updateEventStatus,
   type EventWriteResult,
 } from "@/services/eventservices";
 import { success, error, validationError } from "@/lib/api-response";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { type EventInput } from "@/types/eventtype";
+import { type EventInput, type EventStatusInput } from "@/types/eventtype";
 
 function toEventWriteResponse(result: EventWriteResult) {
   if ("validationErrors" in result) {
@@ -92,6 +93,29 @@ export async function putEventByIdRoute(
 
   const { id } = await params;
   const result = await updateEvent(id, body);
+
+  return toEventWriteResponse(result);
+}
+
+export async function patchEventStatusByIdRoute(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const adminResult = await requireAdmin();
+  if (!adminResult.ok) {
+    return adminResult.response;
+  }
+
+  let body: EventStatusInput;
+
+  try {
+    body = (await request.json()) as EventStatusInput;
+  } catch {
+    return error("Invalid JSON body", 400);
+  }
+
+  const { id } = await params;
+  const result = await updateEventStatus(id, body);
 
   return toEventWriteResponse(result);
 }
