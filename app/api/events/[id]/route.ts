@@ -1,4 +1,5 @@
 import {
+  deleteEventByIdRoute,
   getEventByIdRoute,
   patchEventStatusByIdRoute,
   putEventByIdRoute,
@@ -6,4 +7,5 @@ import {
 
 export const GET = getEventByIdRoute;
 export const PUT = putEventByIdRoute;
+export const DELETE = deleteEventByIdRoute;
 export const PATCH = patchEventStatusByIdRoute;
