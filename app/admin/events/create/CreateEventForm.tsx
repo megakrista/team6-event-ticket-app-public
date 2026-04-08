@@ -148,8 +148,8 @@ export default function CreateEventForm({ venues }: CreateEventFormProps) {
             Create another event
           </button>
           <Link
-            href="/"
-            className="rounded border border-zinc-300 px-4 py-2 font-medium text-zinc-700 hover:bg-zinc-50"
+              href="/events"
+              className="rounded border border-zinc-300 px-4 py-2 font-medium text-zinc-700 hover:bg-zinc-50"
           >
             Back to home
           </Link>
