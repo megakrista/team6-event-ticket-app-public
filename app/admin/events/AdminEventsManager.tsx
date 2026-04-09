@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, type KeyboardEvent, useState } from "react";
 import Link from "next/link";
 import { API_ROUTES } from "@/lib/api-routes";
 import { capitalize, formatDateTime, formatPrice } from "@/lib/format-helpers";
 import { VALID_CATEGORIES } from "@/types/eventtype";
+import FormField from "@/ui/components/FormField";
 
 const STATUS_OPTIONS = ["DRAFT", "PUBLISHED"] as const;
 type EditableStatus = (typeof STATUS_OPTIONS)[number];
@@ -98,7 +99,7 @@ function isEditableStatus(value: string): value is EditableStatus {
   return STATUS_OPTIONS.includes(value as EditableStatus);
 }
 
-function toAdminEventItem(
+function apiEventToAdminItem(
   event: ApiEventPayload,
   fallbackVenueName: string,
 ): AdminEventItem {
@@ -150,6 +151,8 @@ export default function AdminEventsManager({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [eventPendingDelete, setEventPendingDelete] =
+    useState<AdminEventItem | null>(null);
 
   function applyEventUpdate(updatedEvent: AdminEventItem) {
     setEvents((prev) =>
@@ -176,14 +179,29 @@ export default function AdminEventsManager({
     setFieldErrors({});
   }
 
-  async function handleDelete(event: AdminEventItem) {
-    const confirmed = window.confirm(
-      `Delete "${event.title}"? This cannot be undone.`,
-    );
-    if (!confirmed) {
+  function updateEditField(field: keyof EditFormState, value: string) {
+    setEditForm((prev) => (prev ? { ...prev, [field]: value } : prev));
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  }
+
+  function blockNegativeKeys(e: KeyboardEvent) {
+    if (e.key === "-" || e.key === "e" || e.key === "E") {
+      e.preventDefault();
+    }
+  }
+
+  async function confirmDeleteEvent() {
+    if (!eventPendingDelete) {
       return;
     }
 
+    const event = eventPendingDelete;
     const actionKey = `delete:${event.id}`;
     setBusyAction(actionKey);
     setBannerError(null);
@@ -211,6 +229,7 @@ export default function AdminEventsManager({
     } catch {
       setBannerError("Network error while deleting event.");
     } finally {
+      setEventPendingDelete(null);
       setBusyAction(null);
     }
   }
@@ -242,7 +261,7 @@ export default function AdminEventsManager({
         return;
       }
 
-      applyEventUpdate(toAdminEventItem(data.event, event.venueName));
+      applyEventUpdate(apiEventToAdminItem(data.event, event.venueName));
     } catch {
       setBannerError("Network error while updating status.");
     } finally {
@@ -295,7 +314,7 @@ export default function AdminEventsManager({
 
       const existingEvent = events.find((event) => event.id === editingId);
       applyEventUpdate(
-        toAdminEventItem(data.event, existingEvent?.venueName ?? ""),
+        apiEventToAdminItem(data.event, existingEvent?.venueName ?? ""),
       );
       cancelEdit();
     } catch {
@@ -381,7 +400,10 @@ export default function AdminEventsManager({
               </button>
               <button
                 type="button"
-                onClick={() => handleDelete(event)}
+                onClick={() => {
+                  setBannerError(null);
+                  setEventPendingDelete(event);
+                }}
                 disabled={isDeleteBusy || isEditBusy || isStatusBusy}
                 className="rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -420,215 +442,124 @@ export default function AdminEventsManager({
                 className="mt-5 space-y-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4"
               >
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="text-sm">
-                    <span className="mb-1 block font-medium text-zinc-700">
-                      Title
-                    </span>
-                    <input
-                      value={editForm.title}
-                      onChange={(e) =>
-                        setEditForm((prev) =>
-                          prev ? { ...prev, title: e.target.value } : prev,
-                        )
-                      }
-                      className="w-full rounded-md border border-zinc-300 px-3 py-2"
-                    />
-                    {fieldErrors.title ? (
-                      <p className="mt-1 text-xs text-red-600">
-                        {fieldErrors.title}
-                      </p>
-                    ) : null}
-                  </label>
+                  <FormField
+                    label="Title"
+                    name={`title-${event.id}`}
+                    value={editForm.title}
+                    onChange={(e) => updateEditField("title", e.target.value)}
+                    error={fieldErrors.title}
+                    required
+                  />
 
-                  <label className="text-sm">
-                    <span className="mb-1 block font-medium text-zinc-700">
-                      Category
-                    </span>
-                    <select
-                      value={editForm.category}
-                      onChange={(e) =>
-                        setEditForm((prev) =>
-                          prev ? { ...prev, category: e.target.value } : prev,
-                        )
-                      }
-                      className="w-full rounded-md border border-zinc-300 px-3 py-2"
-                    >
+                  <FormField
+                    as="select"
+                    label="Category"
+                    name={`category-${event.id}`}
+                    value={editForm.category}
+                    onChange={(e) => updateEditField("category", e.target.value)}
+                    error={fieldErrors.category}
+                    required
+                  >
                       <option value="">Select category</option>
                       {VALID_CATEGORIES.map((category) => (
                         <option key={category} value={category}>
                           {capitalize(category)}
                         </option>
                       ))}
-                    </select>
-                    {fieldErrors.category ? (
-                      <p className="mt-1 text-xs text-red-600">
-                        {fieldErrors.category}
-                      </p>
-                    ) : null}
-                  </label>
+                  </FormField>
                 </div>
 
-                <label className="block text-sm">
-                  <span className="mb-1 block font-medium text-zinc-700">
-                    Description
-                  </span>
-                  <textarea
-                    value={editForm.description}
-                    onChange={(e) =>
-                      setEditForm((prev) =>
-                        prev ? { ...prev, description: e.target.value } : prev,
-                      )
-                    }
-                    rows={4}
-                    className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                <FormField
+                  as="textarea"
+                  label="Description"
+                  name={`description-${event.id}`}
+                  value={editForm.description}
+                  onChange={(e) =>
+                    updateEditField("description", e.target.value)
+                  }
+                  error={fieldErrors.description}
+                  charCount={editForm.description.length}
+                  maxLengthDisplay={5000}
+                  required
+                />
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    as="select"
+                    label="Venue"
+                    name={`venueId-${event.id}`}
+                    value={editForm.venueId}
+                    onChange={(e) => updateEditField("venueId", e.target.value)}
+                    error={fieldErrors.venueId}
+                    required
+                  >
+                    <option value="">Select venue</option>
+                    {venues.map((venue) => (
+                      <option key={venue.id} value={venue.id}>
+                        {venue.name}
+                      </option>
+                    ))}
+                  </FormField>
+
+                  <FormField
+                    label="Image URL"
+                    name={`imageUrl-${event.id}`}
+                    type="url"
+                    value={editForm.imageUrl}
+                    onChange={(e) => updateEditField("imageUrl", e.target.value)}
+                    error={fieldErrors.imageUrl}
+                    placeholder="https://example.com/image.jpg"
                   />
-                  {fieldErrors.description ? (
-                    <p className="mt-1 text-xs text-red-600">
-                      {fieldErrors.description}
-                    </p>
-                  ) : null}
-                </label>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="text-sm">
-                    <span className="mb-1 block font-medium text-zinc-700">
-                      Venue
-                    </span>
-                    <select
-                      value={editForm.venueId}
-                      onChange={(e) =>
-                        setEditForm((prev) =>
-                          prev ? { ...prev, venueId: e.target.value } : prev,
-                        )
-                      }
-                      className="w-full rounded-md border border-zinc-300 px-3 py-2"
-                    >
-                      <option value="">Select venue</option>
-                      {venues.map((venue) => (
-                        <option key={venue.id} value={venue.id}>
-                          {venue.name}
-                        </option>
-                      ))}
-                    </select>
-                    {fieldErrors.venueId ? (
-                      <p className="mt-1 text-xs text-red-600">
-                        {fieldErrors.venueId}
-                      </p>
-                    ) : null}
-                  </label>
-
-                  <label className="text-sm">
-                    <span className="mb-1 block font-medium text-zinc-700">
-                      Image URL
-                    </span>
-                    <input
-                      type="url"
-                      value={editForm.imageUrl}
-                      onChange={(e) =>
-                        setEditForm((prev) =>
-                          prev ? { ...prev, imageUrl: e.target.value } : prev,
-                        )
-                      }
-                      className="w-full rounded-md border border-zinc-300 px-3 py-2"
-                    />
-                    {fieldErrors.imageUrl ? (
-                      <p className="mt-1 text-xs text-red-600">
-                        {fieldErrors.imageUrl}
-                      </p>
-                    ) : null}
-                  </label>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="text-sm">
-                    <span className="mb-1 block font-medium text-zinc-700">
-                      Starts At
-                    </span>
-                    <input
-                      type="datetime-local"
-                      value={editForm.startsAt}
-                      onChange={(e) =>
-                        setEditForm((prev) =>
-                          prev ? { ...prev, startsAt: e.target.value } : prev,
-                        )
-                      }
-                      className="w-full rounded-md border border-zinc-300 px-3 py-2"
-                    />
-                    {fieldErrors.startsAt ? (
-                      <p className="mt-1 text-xs text-red-600">
-                        {fieldErrors.startsAt}
-                      </p>
-                    ) : null}
-                  </label>
+                  <FormField
+                    label="Starts At"
+                    name={`startsAt-${event.id}`}
+                    type="datetime-local"
+                    value={editForm.startsAt}
+                    onChange={(e) => updateEditField("startsAt", e.target.value)}
+                    error={fieldErrors.startsAt}
+                    required
+                  />
 
-                  <label className="text-sm">
-                    <span className="mb-1 block font-medium text-zinc-700">
-                      Ends At
-                    </span>
-                    <input
-                      type="datetime-local"
-                      value={editForm.endsAt}
-                      onChange={(e) =>
-                        setEditForm((prev) =>
-                          prev ? { ...prev, endsAt: e.target.value } : prev,
-                        )
-                      }
-                      className="w-full rounded-md border border-zinc-300 px-3 py-2"
-                    />
-                    {fieldErrors.endsAt ? (
-                      <p className="mt-1 text-xs text-red-600">
-                        {fieldErrors.endsAt}
-                      </p>
-                    ) : null}
-                  </label>
+                  <FormField
+                    label="Ends At"
+                    name={`endsAt-${event.id}`}
+                    type="datetime-local"
+                    value={editForm.endsAt}
+                    onChange={(e) => updateEditField("endsAt", e.target.value)}
+                    error={fieldErrors.endsAt}
+                    required
+                  />
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="text-sm">
-                    <span className="mb-1 block font-medium text-zinc-700">
-                      Capacity
-                    </span>
-                    <input
-                      type="number"
-                      min={1}
-                      step={1}
-                      value={editForm.capacity}
-                      onChange={(e) =>
-                        setEditForm((prev) =>
-                          prev ? { ...prev, capacity: e.target.value } : prev,
-                        )
-                      }
-                      className="w-full rounded-md border border-zinc-300 px-3 py-2"
-                    />
-                    {fieldErrors.capacity ? (
-                      <p className="mt-1 text-xs text-red-600">
-                        {fieldErrors.capacity}
-                      </p>
-                    ) : null}
-                  </label>
+                  <FormField
+                    label="Capacity"
+                    name={`capacity-${event.id}`}
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={editForm.capacity}
+                    onChange={(e) => updateEditField("capacity", e.target.value)}
+                    onKeyDown={blockNegativeKeys}
+                    error={fieldErrors.capacity}
+                    required
+                  />
 
-                  <label className="text-sm">
-                    <span className="mb-1 block font-medium text-zinc-700">
-                      Price
-                    </span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={editForm.price}
-                      onChange={(e) =>
-                        setEditForm((prev) =>
-                          prev ? { ...prev, price: e.target.value } : prev,
-                        )
-                      }
-                      className="w-full rounded-md border border-zinc-300 px-3 py-2"
-                    />
-                    {fieldErrors.price ? (
-                      <p className="mt-1 text-xs text-red-600">
-                        {fieldErrors.price}
-                      </p>
-                    ) : null}
-                  </label>
+                  <FormField
+                    label="Price"
+                    name={`price-${event.id}`}
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={editForm.price}
+                    onChange={(e) => updateEditField("price", e.target.value)}
+                    onKeyDown={blockNegativeKeys}
+                    error={fieldErrors.price}
+                    required
+                  />
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -653,6 +584,40 @@ export default function AdminEventsManager({
           </article>
         );
       })}
+
+      {eventPendingDelete ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 p-4">
+          <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-5 shadow-xl">
+            <h3 className="text-lg font-semibold text-zinc-900">
+              Delete event
+            </h3>
+            <p className="mt-2 text-sm text-zinc-600">
+              Delete &quot;{eventPendingDelete.title}&quot;? This action cannot
+              be undone.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEventPendingDelete(null)}
+                disabled={busyAction === `delete:${eventPendingDelete.id}`}
+                className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteEvent}
+                disabled={busyAction === `delete:${eventPendingDelete.id}`}
+                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {busyAction === `delete:${eventPendingDelete.id}`
+                  ? "Deleting..."
+                  : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

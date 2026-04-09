@@ -12,7 +12,9 @@ import AdminEventsManager, {
 
 export const dynamic = "force-dynamic";
 
-function toAdminEventItem(event: Awaited<ReturnType<typeof listAdminEvents>>[number]): AdminEventItem {
+function prismaEventToAdminItem(
+  event: Awaited<ReturnType<typeof listAdminEvents>>[number],
+): AdminEventItem {
   return {
     id: event.id,
     title: event.title,
@@ -52,7 +54,7 @@ export default async function AdminEventsPage() {
   }
 
   const [events, venues] = await Promise.all([listAdminEvents(), listVenues()]);
-  const initialEvents = events.map(toAdminEventItem);
+  const initialEvents = events.map(prismaEventToAdminItem);
   const venueOptions = venues.map(toAdminVenueOption);
 
   return (
