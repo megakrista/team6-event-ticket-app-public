@@ -294,6 +294,15 @@ export async function updateEventStatus(
   }
 }
 
+export async function listAdminEvents(): Promise<EventResponse[]> {
+  const rawEvents = await prisma.event.findMany({
+    include: EVENT_INCLUDE,
+    orderBy: [{ startsAt: "asc" }, { createdAt: "desc" }],
+  });
+
+  return rawEvents.map((event) => validateEventInput(event));
+}
+
 export async function getEventById(id: string) {
   if (!UUID_RE.test(id)) {
     return { status: 404, error: "Event not found" };
