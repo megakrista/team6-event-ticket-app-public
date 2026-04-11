@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionByToken } from "@/services/sessionservices";
-import CreateEventForm from "./CreateEventForm";
+import { listVenues } from "@/services/venueservices";
+import CreateEventForm from "@/app/admin/events/create/CreateEventForm";
 
 export default async function CreateEventPage() {
   const cookieStore = await cookies();
@@ -12,9 +13,11 @@ export default async function CreateEventPage() {
     redirect("/login");
   }
 
+  const venues = await listVenues();
+
   return (
     <main className="min-h-screen bg-zinc-50 p-8">
-      <CreateEventForm userId={result.user.id} />
+      <CreateEventForm venues={venues} />
     </main>
   );
 }

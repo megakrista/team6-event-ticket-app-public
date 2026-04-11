@@ -5,8 +5,13 @@ import { FormEvent, useEffect, useState } from "react";
 import FormField from "@/ui/components/FormField";
 import { VALID_CATEGORIES } from "@/types/eventtype";
 import { API_ROUTES } from "@/lib/api-routes";
+import { capitalize } from "@/lib/format-helpers";
 
 type Venue = { id: string; name: string };
+
+type CreateEventFormProps = {
+  venues: Venue[];
+};
 
 type FormState = {
   title: string;
@@ -32,11 +37,7 @@ const INITIAL_FORM: FormState = {
   imageUrl: "",
 };
 
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function buildPayload(form: FormState, userId: string) {
+function buildPayload(form: FormState) {
   return {
     title: form.title,
     description: form.description,
@@ -47,7 +48,6 @@ function buildPayload(form: FormState, userId: string) {
     capacity: form.capacity ? parseInt(form.capacity, 10) : undefined,
     price: form.price ? parseFloat(form.price) : undefined,
     imageUrl: form.imageUrl || undefined,
-    createdById: userId,
   };
 }
 
@@ -57,29 +57,12 @@ function isFormDirty(form: FormState): boolean {
   );
 }
 
-export default function CreateEventForm({ userId }: { userId: string }) {
+export default function CreateEventForm({ venues }: CreateEventFormProps) {
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [venues, setVenues] = useState<Venue[]>([]);
-  const [venuesLoading, setVenuesLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ id: string; title: string } | null>(null);
-
-  useEffect(() => {
-    async function loadVenues() {
-      try {
-        const response = await fetch(API_ROUTES.venues);
-        const data = await response.json();
-        setVenues(data.venues ?? []);
-      } catch {
-        setError("Failed to load venues");
-      } finally {
-        setVenuesLoading(false);
-      }
-    }
-    loadVenues();
-  }, []);
 
   useEffect(() => {
     function onBeforeUnload(e: BeforeUnloadEvent) {
@@ -118,7 +101,7 @@ export default function CreateEventForm({ userId }: { userId: string }) {
       const response = await fetch(API_ROUTES.events, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildPayload(form, userId)),
+        body: JSON.stringify(buildPayload(form)),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -165,8 +148,8 @@ export default function CreateEventForm({ userId }: { userId: string }) {
             Create another event
           </button>
           <Link
-            href="/"
-            className="rounded border border-zinc-300 px-4 py-2 font-medium text-zinc-700 hover:bg-zinc-50"
+              href="/events"
+              className="rounded border border-zinc-300 px-4 py-2 font-medium text-zinc-700 hover:bg-zinc-50"
           >
             Back to home
           </Link>
@@ -181,7 +164,7 @@ export default function CreateEventForm({ userId }: { userId: string }) {
 
       {error && <p className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</p>}
 
-      {!venuesLoading && venues.length === 0 && !error && (
+      {venues.length === 0 && !error && (
         <p className="mb-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
           No venues available. Run <code className="font-mono">npx prisma db seed</code> to create test venues.
         </p>
@@ -220,16 +203,12 @@ export default function CreateEventForm({ userId }: { userId: string }) {
           </FormField>
 
           <FormField as="select" label="Venue" name="venueId" value={form.venueId} onChange={(e) => handleChange("venueId", e.target.value)} error={fieldErrors.venueId} required>
-            {venuesLoading ? (
-              <option value="">Loading venues...</option>
-            ) : (
-              <>
-                <option value="">Select venue</option>
-                {venues.map((v) => (
-                  <option key={v.id} value={v.id}>{v.name}</option>
-                ))}
-              </>
-            )}
+            <>
+              <option value="">Select venue</option>
+              {venues.map((v) => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </>
           </FormField>
         </div>
 
@@ -320,7 +299,7 @@ export default function CreateEventForm({ userId }: { userId: string }) {
 
         <button
           type="submit"
-          disabled={loading || (venues.length === 0 && !venuesLoading)}
+          disabled={loading || venues.length === 0}
           className="w-full rounded bg-blue-600 p-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Creating event..." : "Create event"}

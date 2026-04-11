@@ -1,11 +1,28 @@
-import { Prisma } from "@/app/generated/prisma";
+import { EventStatus, Prisma } from "@/app/generated/prisma";
 import prisma from "@/lib/prisma";
 import {
   VALID_CATEGORIES,
-  type CreateEventBody,
+  type EventInput,
+  type EventStatusInput,
+  type EventCategory,
   type EventResponse,
   type EventValidationErrors,
 } from "@/types/eventtype";
+
+export const EVENTS_PER_PAGE = 9;
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+type UpdatableEventStatus =
+  | typeof EventStatus.DRAFT
+  | typeof EventStatus.PUBLISHED;
+
+export type ListEventsParams = {
+  search?: string;
+  category?: string;
+  dateFrom?: string;
+  page?: number;
+};
 
 const EVENT_INCLUDE = {
   venue: true,
@@ -22,7 +39,24 @@ type EventWithVenue = Prisma.EventGetPayload<{
   include: typeof EVENT_INCLUDE;
 }>;
 
-function serializeEvent(event: EventWithVenue): EventResponse {
+type EventValidationFailure = {
+  status: 400;
+  validationErrors: EventValidationErrors;
+};
+
+type EventWriteError =
+  | { status: 400; error: "Venue not found" | "User not found" | "Invalid reference" }
+  | { status: 404; error: "Event not found" }
+  | { status: 500; error: "Internal server error" };
+
+type EventWriteSuccess = {
+  status: 200 | 201;
+  event: EventResponse;
+};
+
+export type EventWriteResult = EventValidationFailure | EventWriteError | EventWriteSuccess;
+
+function validateEventInput(event: EventWithVenue): EventResponse {
   return {
     ...event,
     price: Number(event.price),
@@ -35,7 +69,7 @@ function serializeEvent(event: EventWithVenue): EventResponse {
 }
 
 export function validateCreateEventBody(
-  body: CreateEventBody,
+  body: EventInput,
 ): EventValidationErrors {
   const errors: EventValidationErrors = {};
 
@@ -110,22 +144,55 @@ export function validateCreateEventBody(
     errors.venueId = "Required";
   }
 
-  if (!body.createdById || typeof body.createdById !== "string") {
-    errors.createdById = "Required";
-  }
-
   return errors;
 }
 
-export async function createEvent(body: CreateEventBody) {
-  const errors = validateCreateEventBody(body);
+function mapEventWriteError(err: unknown): EventWriteError {
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === "P2025") {
+      return { status: 404, error: "Event not found" };
+    }
 
-  if (Object.keys(errors).length > 0) {
-    return { status: 400, validationErrors: errors };
+    if (err.code === "P2003") {
+      const field = String(err.meta?.field_name ?? "");
+      if (field.includes("venueId")) {
+        return { status: 400, error: "Venue not found" };
+      }
+      if (field.includes("createdById")) {
+        return { status: 400, error: "User not found" };
+      }
+
+      return { status: 400, error: "Invalid reference" };
+    }
+  }
+
+  return { status: 500, error: "Internal server error" };
+}
+
+async function runEventWrite(
+  body: EventInput,
+  successStatus: 200 | 201,
+  op: () => Promise<EventWithVenue>,
+): Promise<EventWriteResult> {
+  const validationErrors = validateCreateEventBody(body);
+  if (Object.keys(validationErrors).length > 0) {
+    return { status: 400, validationErrors };
   }
 
   try {
-    const event = await prisma.event.create({
+    const event = await op();
+    return { status: successStatus, event: validateEventInput(event) };
+  } catch (err) {
+    return mapEventWriteError(err);
+  }
+}
+
+export async function createEvent(
+  body: EventInput,
+  createdById: string,
+): Promise<EventWriteResult> {
+  return runEventWrite(body, 201, () =>
+    prisma.event.create({
       data: {
         title: body.title!.trim(),
         description: body.description!.trim(),
@@ -135,34 +202,112 @@ export async function createEvent(body: CreateEventBody) {
         endsAt: new Date(body.endsAt!),
         price: body.price!,
         capacity: body.capacity!,
-        status: "DRAFT",
+        status: EventStatus.DRAFT,
         venueId: body.venueId!,
-        createdById: body.createdById!,
+        createdById,
       },
+      include: EVENT_INCLUDE,
+    }),
+  );
+}
+
+export async function updateEvent(id: string, body: EventInput): Promise<EventWriteResult> {
+  return runEventWrite(body, 200, () =>
+    prisma.event.update({
+      where: { id },
+      data: {
+        title: body.title!.trim(),
+        description: body.description!.trim(),
+        category: body.category!.trim(),
+        imageUrl: body.imageUrl || null,
+        startsAt: new Date(body.startsAt!),
+        endsAt: new Date(body.endsAt!),
+        price: body.price!,
+        capacity: body.capacity!,
+        venueId: body.venueId!,
+      },
+      include: EVENT_INCLUDE,
+    }),
+  );
+}
+
+export async function deleteEvent(id: string): Promise<EventWriteResult> {
+  try {
+    const event = await prisma.event.delete({
+      where: { id },
       include: EVENT_INCLUDE,
     });
 
-    return { status: 201, event: serializeEvent(event) };
+    return { status: 200, event: validateEventInput(event) };
   } catch (err) {
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2003"
-    ) {
-      const field = (err.meta?.field_name as string) || "";
-      if (field.includes("venueId")) {
-        return { status: 400, error: "Venue not found" };
-      }
-      if (field.includes("createdById")) {
-        return { status: 400, error: "User not found" };
-      }
-      return { status: 400, error: "Invalid reference" };
-    }
-
-    return { status: 500, error: "Internal server error" };
+    return mapEventWriteError(err);
   }
 }
 
+function validateEventStatusBody(body: EventStatusInput): {
+  validationErrors: EventValidationErrors;
+  normalizedStatus: UpdatableEventStatus | null;
+} {
+  const validationErrors: EventValidationErrors = {};
+  const rawStatus = typeof body.status === "string" ? body.status.trim() : "";
+
+  if (!rawStatus) {
+    validationErrors.status = "Required";
+    return { validationErrors, normalizedStatus: null };
+  }
+
+  const normalizedStatus = rawStatus.toUpperCase();
+  if (
+    normalizedStatus !== EventStatus.DRAFT &&
+    normalizedStatus !== EventStatus.PUBLISHED
+  ) {
+    validationErrors.status = "Invalid status. Must be one of: draft, published";
+    return { validationErrors, normalizedStatus: null };
+  }
+
+  return { validationErrors, normalizedStatus };
+}
+
+export async function updateEventStatus(
+  id: string,
+  body: EventStatusInput,
+): Promise<EventWriteResult> {
+  if (!UUID_RE.test(id)) {
+    return { status: 404, error: "Event not found" };
+  }
+
+  const { validationErrors, normalizedStatus } = validateEventStatusBody(body);
+  if (Object.keys(validationErrors).length > 0 || !normalizedStatus) {
+    return { status: 400, validationErrors };
+  }
+
+  try {
+    const event = await prisma.event.update({
+      where: { id },
+      data: { status: normalizedStatus },
+      include: EVENT_INCLUDE,
+    });
+
+    return { status: 200, event: validateEventInput(event) };
+  } catch (err) {
+    return mapEventWriteError(err);
+  }
+}
+
+export async function listAdminEvents(): Promise<EventResponse[]> {
+  const rawEvents = await prisma.event.findMany({
+    include: EVENT_INCLUDE,
+    orderBy: [{ startsAt: "asc" }, { createdAt: "desc" }],
+  });
+
+  return rawEvents.map((event) => validateEventInput(event));
+}
+
 export async function getEventById(id: string) {
+  if (!UUID_RE.test(id)) {
+    return { status: 404, error: "Event not found" };
+  }
+
   const event = await prisma.event.findUnique({
     where: { id },
     include: EVENT_INCLUDE,
@@ -172,14 +317,44 @@ export async function getEventById(id: string) {
     return { status: 404, error: "Event not found" };
   }
 
-  return { status: 200, event: serializeEvent(event) };
+  return { status: 200, event: validateEventInput(event) };
 }
 
-export async function listEvents(): Promise<EventResponse[]> {
-  const rawEvents = await prisma.event.findMany({
-    include: EVENT_INCLUDE,
-    orderBy: { startsAt: "asc" },
-  });
+export async function listEvents(
+  params: ListEventsParams = {},
+): Promise<{ events: EventResponse[]; total: number }> {
+  const page = Math.max(1, Number.isFinite(params.page) ? params.page! : 1);
+  const skip = (page - 1) * EVENTS_PER_PAGE;
+  const dateFrom = params.dateFrom ? new Date(params.dateFrom + "T00:00:00.000Z") : null;
 
-  return rawEvents.map((event) => serializeEvent(event));
+  const where: Prisma.EventWhereInput = {
+    status: EventStatus.PUBLISHED,
+    ...(params.search && {
+      OR: [
+        { title: { contains: params.search, mode: "insensitive" } },
+        { description: { contains: params.search, mode: "insensitive" } },
+        { venue: { name: { contains: params.search, mode: "insensitive" } } },
+        { venue: { address: { contains: params.search, mode: "insensitive" } } },
+      ],
+    }),
+    ...(params.category && VALID_CATEGORIES.includes(params.category as EventCategory) && {
+      category: params.category,
+    }),
+    ...(dateFrom && !isNaN(dateFrom.getTime()) && {
+      startsAt: { gte: dateFrom },
+    }),
+  };
+
+  const [rawEvents, total] = await Promise.all([
+    prisma.event.findMany({
+      where,
+      include: EVENT_INCLUDE,
+      orderBy: { startsAt: "asc" },
+      skip,
+      take: EVENTS_PER_PAGE,
+    }),
+    prisma.event.count({ where }),
+  ]);
+
+  return { events: rawEvents.map((event) => validateEventInput(event)), total };
 }
