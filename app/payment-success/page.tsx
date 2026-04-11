@@ -7,7 +7,7 @@ import { getSessionByToken } from "@/services/sessionservices";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
 import prisma from "@/lib/prisma";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+export const dynamic = "force-dynamic";
 
 export default async function PaymentSuccess({
   searchParams,
@@ -21,6 +21,7 @@ export default async function PaymentSuccess({
     payment_intent?: string;
   }>;
 }) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const params = await searchParams;
 
   if (!params.payment_intent) {

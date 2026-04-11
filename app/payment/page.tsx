@@ -24,7 +24,7 @@ export default async function PaymentPage({
     return <main className="p-10 text-center text-red-600">Event not found.</main>;
   }
 
-  const event = result.event;
+  const event = result.event!;
 
   const soldCount = await prisma.ticket.count({
     where: { eventId: event.id, status: TicketStatus.PAID },

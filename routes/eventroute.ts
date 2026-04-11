@@ -18,7 +18,7 @@ function toEventWriteResponse(result: EventWriteResult) {
   }
 
   if ("error" in result) {
-    return error(result.error, result.status);
+    return error(result.error ?? "An unknown error occurred", result.status);
   }
 
   return success({ event: result.event }, result.status);
@@ -69,7 +69,7 @@ export async function getEventByIdRoute(
   const result = await getEventById(id);
 
   if ("error" in result) {
-    return error(result.error, result.status);
+    return error(result.error?? "An unknown error occurred", result.status);
   }
 
   return success({ event: result.event });
