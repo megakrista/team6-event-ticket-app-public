@@ -6,30 +6,25 @@ import { getSessionByToken } from "@/services/sessionservices";
 type SessionResult = Awaited<ReturnType<typeof getSessionByToken>>;
 type AuthenticatedSession = Exclude<SessionResult, null>;
 
-type RequireAdminResult =
+type AuthResult =
   | { ok: true; session: AuthenticatedSession }
   | { ok: false; response: ReturnType<typeof error> };
 
-export async function requireAdmin(): Promise<RequireAdminResult> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const sessionResult = await getSessionByToken(token);
-
-  if (!sessionResult) {
-    return { ok: false, response: error("Unauthorized", 401) };
+export async function requireAdmin(): Promise<AuthResult> {
+  const currentUser = await getCurrentUser();
+  
+  if (!currentUser.ok) {
+    return currentUser;
   }
 
-  if (sessionResult.user.role !== "ADMIN") {
+  if (currentUser.session.user.role !== "ADMIN") {
     return { ok: false, response: error("Forbidden", 403) };
   }
 
-  return { ok: true, session: sessionResult };
+  return currentUser;
 }
 
-export async function getCurrentUser(): Promise<
-  | { ok: true; session: AuthenticatedSession }
-  | { ok: false; response: ReturnType<typeof error> }
-> {
+export async function getCurrentUser(): Promise<AuthResult> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const sessionResult = await getSessionByToken(token);

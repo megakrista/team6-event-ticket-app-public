@@ -12,5 +12,12 @@ export const GET = async (request: Request, { params }: { params: Promise<{ id: 
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
+  const { id } = await params;
+  
+  // Only allow access if user is accessing their own data or is an admin
+  if (sessionResult.user.id !== id && sessionResult.user.role !== "ADMIN") {
+    return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+  }
+
   return await getUserByIdRoute(request, { params });
 };

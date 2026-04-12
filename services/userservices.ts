@@ -38,19 +38,19 @@ export type UpdateUserBody = {
 export async function updateUser(id: string, body: UpdateUserBody) {
   const errors: Record<string, string> = {};
 
-  const firstName = typeof body.firstName === "string" ? body.firstName.trim() : "";
-  const lastName = typeof body.lastName === "string" ? body.lastName.trim() : "";
-  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const firstName = typeof body.firstName === "string" ? body.firstName.trim() : undefined;
+  const lastName = typeof body.lastName === "string" ? body.lastName.trim() : undefined;
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : undefined;
 
-  if (firstName && (firstName.length < 1 || firstName.length > 50)) {
+  if (firstName !== undefined && (firstName.length < 1 || firstName.length > 50)) {
     errors.firstName = "First name must be 1-50 characters";
   }
 
-  if (lastName && (lastName.length < 1 || lastName.length > 50)) {
+  if (lastName !== undefined && (lastName.length < 1 || lastName.length > 50)) {
     errors.lastName = "Last name must be 1-50 characters";
   }
 
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (email !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     errors.email = "Invalid email format";
   }
 
@@ -59,9 +59,9 @@ export async function updateUser(id: string, body: UpdateUserBody) {
   }
 
   const updateData: { firstName?: string; lastName?: string; email?: string } = {};
-  if (firstName) updateData.firstName = firstName;
-  if (lastName) updateData.lastName = lastName;
-  if (email) updateData.email = email;
+  if (firstName !== undefined) updateData.firstName = firstName;
+  if (lastName !== undefined) updateData.lastName = lastName;
+  if (email !== undefined) updateData.email = email;
 
   if (Object.keys(updateData).length === 0) {
     return { status: 400, error: "No fields to update" };
