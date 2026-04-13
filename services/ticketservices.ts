@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { TicketStatus } from "@/app/generated/prisma";
+import { TicketStatus } from "@prisma/client";
 
 export async function saveTicketToDatabase(data: {
   amount: number;
