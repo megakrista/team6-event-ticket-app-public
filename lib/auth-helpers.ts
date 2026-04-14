@@ -11,7 +11,7 @@ type AuthResult =
   | { ok: false; response: ReturnType<typeof error> };
 
 export async function requireAdmin(): Promise<AuthResult> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await requireAuth();
   
   if (!currentUser.ok) {
     return currentUser;
@@ -24,7 +24,7 @@ export async function requireAdmin(): Promise<AuthResult> {
   return currentUser;
 }
 
-export async function getCurrentUser(): Promise<AuthResult> {
+export async function requireAuth(): Promise<AuthResult> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const sessionResult = await getSessionByToken(token);
@@ -35,3 +35,5 @@ export async function getCurrentUser(): Promise<AuthResult> {
 
   return { ok: true, session: sessionResult };
 }
+
+export const getCurrentUser = requireAuth;
