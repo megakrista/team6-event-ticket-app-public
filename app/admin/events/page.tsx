@@ -80,6 +80,12 @@ export default async function AdminEventsPage() {
               Back to events
             </Link>
             <Link
+              href="/admin/venues"
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+            >
+              Manage venues
+            </Link>
+            <Link
               href="/admin/events/create"
               className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
