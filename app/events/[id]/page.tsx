@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { capitalize, formatDateTime, formatPrice } from "@/lib/format-helpers";
 import { getEventById } from "@/services/eventservices";
-import EventImage from "@/ui/components/EventImage";
+import EventImage from "@/app/events/_components/EventImage";
 
 const getEvent = cache((id: string) => getEventById(id));
 
@@ -14,14 +14,19 @@ type EventDetailPageProps = {
 export async function generateMetadata({ params }: EventDetailPageProps) {
   const { id } = await params;
   const result = await getEvent(id);
-  return { title: result.event?.title ?? "Event Not Found" };
+
+  if (result.status !== 200) {
+    return { title: "Event Not Found" };
+  }
+
+  return { title: result.event.title };
 }
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = await params;
   const result = await getEvent(id);
 
-  if (!result.event || result.event.status !== "PUBLISHED") {
+  if (result.status !== 200 || result.event.status !== "PUBLISHED") {
     notFound();
   }
 

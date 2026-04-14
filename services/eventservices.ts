@@ -1,4 +1,4 @@
-import { EventStatus, Prisma } from "@/app/generated/prisma";
+import { EventStatus, Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import {
   VALID_CATEGORIES,
@@ -55,6 +55,9 @@ type EventWriteSuccess = {
 };
 
 export type EventWriteResult = EventValidationFailure | EventWriteError | EventWriteSuccess;
+export type GetEventByIdResult =
+  | { status: 404; error: "Event not found" }
+  | { status: 200; event: EventResponse };
 
 function validateEventInput(event: EventWithVenue): EventResponse {
   return {
@@ -303,7 +306,7 @@ export async function listAdminEvents(): Promise<EventResponse[]> {
   return rawEvents.map((event) => validateEventInput(event));
 }
 
-export async function getEventById(id: string) {
+export async function getEventById(id: string): Promise<GetEventByIdResult> {
   if (!UUID_RE.test(id)) {
     return { status: 404, error: "Event not found" };
   }

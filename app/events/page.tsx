@@ -5,10 +5,10 @@ import { listEvents, EVENTS_PER_PAGE } from "@/services/eventservices";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
 import { getSessionByToken } from "@/services/sessionservices";
 import { type EventResponse } from "@/types/eventtype";
-import EventFilterBar from "@/ui/components/EventFilterBar";
-import Pagination from "@/ui/components/Pagination";
+import EventFilterBar from "@/app/events/_components/EventFilterBar";
+import Pagination from "@/app/events/_components/Pagination";
 import { capitalize, formatDateTime, formatPrice } from "@/lib/format-helpers";
-import EventImage from "@/ui/components/EventImage";
+import EventImage from "@/app/events/_components/EventImage";
 
 export const dynamic = "force-dynamic";
 

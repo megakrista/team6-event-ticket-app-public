@@ -8,7 +8,7 @@ import { listVenues } from "@/services/venueservices";
 import AdminEventsManager, {
   type AdminEventItem,
   type AdminVenueOption,
-} from "@/app/admin/events/AdminEventsManager";
+} from "@/app/admin/events/_components/AdminEventsManager";
 
 export const dynamic = "force-dynamic";
 
