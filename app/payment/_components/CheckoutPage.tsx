@@ -8,10 +8,9 @@ type Props = {
   name: string;
   email: string;
   eventId: string;
-  eventTitle: string;
 };
 
-const CheckoutPage = ({ amount, name, email, eventId, eventTitle }: Props) => {
+const CheckoutPage = ({ amount, name, email, eventId }: Props) => {
   const stripe = useStripe();
   const elements = useElements();
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -22,7 +21,7 @@ const CheckoutPage = ({ amount, name, email, eventId, eventTitle }: Props) => {
     fetch("/api/payments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount }),
+      body: JSON.stringify({ eventId }),
     })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -32,7 +31,7 @@ const CheckoutPage = ({ amount, name, email, eventId, eventTitle }: Props) => {
         if (data.clientSecret) setClientSecret(data.clientSecret);
       })
       .catch(() => setErrorMessage("Failed to initialise payment"));
-  }, [amount]);
+  }, [eventId]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -51,7 +50,13 @@ const CheckoutPage = ({ amount, name, email, eventId, eventTitle }: Props) => {
       elements,
       clientSecret,
       confirmParams: {
-        return_url: `${window.location.origin}/payment-success?amount=${amount}&eventId=${eventId}&eventTitle=${encodeURIComponent(eventTitle)}&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}`,
+        return_url: `${window.location.origin}/payment-success`,
+        payment_method_data: {
+          billing_details: {
+            name,
+            email,
+          },
+        },
       },
     });
 
