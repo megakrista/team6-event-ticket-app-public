@@ -30,6 +30,9 @@ npm install
 
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/event_ticket_app?schema=public"
+STRIPE_SECRET_KEY="sk_test_..."
+NEXT_PUBLIC_STRIPE_PUBLIC_KEY="pk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
 ```
 
 ## 4. Start PostgreSQL (Docker)
