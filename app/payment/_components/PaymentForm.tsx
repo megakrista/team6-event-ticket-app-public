@@ -73,7 +73,6 @@ export default function PaymentForm({ event, initialName = "", initialEmail = ""
             name={name}
             email={email}
             eventId={event.id}
-            eventTitle={event.title}
           />
         </Elements>
       ) : (
