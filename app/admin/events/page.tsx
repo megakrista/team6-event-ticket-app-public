@@ -8,7 +8,7 @@ import { listVenues } from "@/services/venueservices";
 import AdminEventsManager, {
   type AdminEventItem,
   type AdminVenueOption,
-} from "@/app/admin/events/AdminEventsManager";
+} from "@/app/admin/events/_components/AdminEventsManager";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +78,12 @@ export default async function AdminEventsPage() {
               className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
             >
               Back to events
+            </Link>
+            <Link
+              href="/admin/venues"
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+            >
+              Manage venues
             </Link>
             <Link
               href="/admin/events/create"

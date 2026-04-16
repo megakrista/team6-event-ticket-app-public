@@ -1,9 +1,9 @@
-import { getCurrentUser } from "@/lib/auth-helpers";
+import { requireAuth } from "@/lib/auth-helpers";
 import { getUserById, updateUser, type UpdateUserBody } from "@/services/userservices";
 import { success, error, validationError } from "@/lib/api-response";
 
 export async function GET() {
-  const auth = await getCurrentUser();
+  const auth = await requireAuth();
   if (!auth.ok) return auth.response;
 
   const result = await getUserById(auth.session.user.id);
@@ -13,7 +13,7 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const auth = await getCurrentUser();
+  const auth = await requireAuth();
   if (!auth.ok) return auth.response;
 
   let body: UpdateUserBody;

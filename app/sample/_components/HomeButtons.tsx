@@ -1,6 +1,6 @@
 "use client";
 
-import Button from './Button';
+import Button from "@/ui/components/Button";
 
 export default function HomeButtons() {
   const handleViewSample = () => {

@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionByToken } from "@/services/sessionservices";
 import { listVenues } from "@/services/venueservices";
-import CreateEventForm from "@/app/admin/events/create/CreateEventForm";
+import CreateEventForm from "@/app/admin/events/create/_components/CreateEventForm";
 
 export default async function CreateEventPage() {
   const cookieStore = await cookies();

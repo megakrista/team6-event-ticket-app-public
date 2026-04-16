@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import LogoutButton from "@/ui/components/LogoutButton";
+import LogoutButton from "@/app/_components/LogoutButton";
 
 const HIDDEN_HEADER_PATHS = new Set(["/login", "/signup"]);
 

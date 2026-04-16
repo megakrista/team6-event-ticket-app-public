@@ -5,10 +5,10 @@ import { listEvents, EVENTS_PER_PAGE } from "@/services/eventservices";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
 import { getSessionByToken } from "@/services/sessionservices";
 import { type EventResponse } from "@/types/eventtype";
-import EventFilterBar from "@/ui/components/EventFilterBar";
-import Pagination from "@/ui/components/Pagination";
+import EventFilterBar from "@/app/events/_components/EventFilterBar";
+import Pagination from "@/app/events/_components/Pagination";
 import { capitalize, formatDateTime, formatPrice } from "@/lib/format-helpers";
-import EventImage from "@/ui/components/EventImage";
+import EventImage from "@/app/events/_components/EventImage";
 
 export const dynamic = "force-dynamic";
 
@@ -158,6 +158,12 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
                     className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
                   >
                     Manage events
+                  </Link>
+                  <Link
+                    href="/admin/venues"
+                    className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+                  >
+                    Manage venues
                   </Link>
                   <Link
                     href="/admin/events/create"

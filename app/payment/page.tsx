@@ -4,8 +4,8 @@ import { getEventById } from "@/services/eventservices";
 import { getSessionByToken } from "@/services/sessionservices";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
 import prisma from "@/lib/prisma";
-import { TicketStatus } from "@/app/generated/prisma";
-import PaymentForm from "@/ui/PaymentForm";
+import { TicketStatus } from "@prisma/client";
+import PaymentForm from "@/app/payment/_components/PaymentForm";
 
 export default async function PaymentPage({
   searchParams,
@@ -20,7 +20,7 @@ export default async function PaymentPage({
 
   const result = await getEventById(eventId);
 
-  if (!("event" in result)) {
+  if (result.status !== 200) {
     return <main className="p-10 text-center text-red-600">Event not found.</main>;
   }
 
