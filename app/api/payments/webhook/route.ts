@@ -1,21 +1,18 @@
 import Stripe from "stripe";
-import { NextResponse } from "next/server";
 import { createOrGetPaidTicket } from "@/services/ticketservices";
+import { error, success, validationError } from "@/lib/api-response";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 export async function POST(request: Request) {
   if (!webhookSecret) {
-    return NextResponse.json(
-      { error: "Missing STRIPE_WEBHOOK_SECRET" },
-      { status: 500 },
-    );
+    return error("Missing STRIPE_WEBHOOK_SECRET", 500);
   }
 
   const signature = request.headers.get("stripe-signature");
   if (!signature) {
-    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+    return validationError({ signature: "Required" }, "Missing signature");
   }
 
   const rawBody = await request.text();
@@ -24,11 +21,11 @@ export async function POST(request: Request) {
   try {
     event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
   } catch {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    return error("Invalid signature", 400);
   }
 
   if (event.type !== "payment_intent.succeeded") {
-    return NextResponse.json({ received: true });
+    return success({ received: true });
   }
 
   const intent = event.data.object as Stripe.PaymentIntent;
@@ -36,7 +33,7 @@ export async function POST(request: Request) {
 
   const eventId = metadata.eventId?.trim();
   if (!eventId) {
-    return NextResponse.json({ received: true, skipped: true });
+    return success({ received: true, skipped: true });
   }
 
   let attendeeName = "";
@@ -70,5 +67,5 @@ export async function POST(request: Request) {
     userId,
   });
 
-  return NextResponse.json({ received: true });
+  return success({ received: true });
 }

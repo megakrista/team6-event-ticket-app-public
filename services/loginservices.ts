@@ -6,29 +6,48 @@ import {
   type LoginServiceResult,
 } from "../types/logintype";
 
-function normalizeLoginBody(body: LoginBody): NormalizedLoginBody | null {
+function normalizeLoginBody(body: LoginBody): {
+  normalizedBody: NormalizedLoginBody | null;
+  validationErrors: Record<string, string>;
+} {
+  const validationErrors: Record<string, string> = {};
   const email = typeof body.email === "string" ? body.email.trim() : "";
   // TODO: remove trim() after password validation.
   const password = typeof body.password === "string" ? body.password.trim() : "";
 
-  if (!email || !password) {
-    return null;
+  if (!email) {
+    validationErrors.email = "Required";
+  }
+
+  if (!password) {
+    validationErrors.password = "Required";
+  }
+
+  if (Object.keys(validationErrors).length > 0) {
+    return {
+      normalizedBody: null,
+      validationErrors,
+    };
   }
 
   return {
-    email: email.toLowerCase(),
-    password,
+    normalizedBody: {
+      email: email.toLowerCase(),
+      password,
+    },
+    validationErrors,
   };
 }
 
 export async function loginFromBody(body: LoginBody): Promise<LoginServiceResult> {
-  const normalizedBody = normalizeLoginBody(body);
+  const { normalizedBody, validationErrors } = normalizeLoginBody(body);
 
   if (!normalizedBody) {
     return {
       status: 400,
       body: {
         error: "Email and password are required",
+        fields: validationErrors,
       },
     };
   }

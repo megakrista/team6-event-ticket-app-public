@@ -9,6 +9,7 @@ export type SignupResponse = {
   error?: string;
   message?: string;
   userId?: string;
+  fields?: Record<string, string>;
 };
 
 export type SignupServiceResult = {
