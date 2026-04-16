@@ -5,9 +5,9 @@ import { getEventById } from "@/services/eventservices";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
 import { getSessionByToken } from "@/services/sessionservices";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
 export async function POST(request: NextRequest) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  
   try {
     const { eventId } = (await request.json()) as { eventId?: string };
 
