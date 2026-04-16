@@ -2,7 +2,7 @@ import Link from "next/link";
 import Stripe from "stripe";
 import { getTicketByPaymentIntentId } from "@/services/ticketservices";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+export const dynamic = "force-dynamic";
 
 export default async function PaymentSuccess({
   searchParams,
@@ -11,6 +11,7 @@ export default async function PaymentSuccess({
     payment_intent?: string;
   }>;
 }) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const params = await searchParams;
 
   if (!params.payment_intent) {

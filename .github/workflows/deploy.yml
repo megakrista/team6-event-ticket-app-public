@@ -23,6 +23,8 @@ jobs:
       # Step 3: Install dependencies
       - name: Install dependencies
         run: npm install
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       # Step 4: Generate Prisma Client
       - name: Generate Prisma Client
@@ -41,7 +43,6 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
       # Step 7: Deploy to Server
       - name: Deploy to Server
         run: |
