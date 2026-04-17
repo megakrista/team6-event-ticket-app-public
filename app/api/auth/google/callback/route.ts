@@ -11,7 +11,8 @@ import {
 } from "@/services/googleauthservices";
 
 function buildLoginRedirectUrl(request: NextRequest, oauthError: string): URL {
-  const loginUrl = new URL("/login", request.nextUrl.origin);
+  const baseUrl = process.env.PUBLIC_URL || "http://localhost:3000";
+  const loginUrl = new URL(`${baseUrl}/login`);
   loginUrl.searchParams.set("oauthError", oauthError);
   return loginUrl;
 }
@@ -71,7 +72,11 @@ export async function GET(request: NextRequest) {
   }
 
   const { token, expiresAt } = await createSession(userId);
-  const response = NextResponse.redirect(new URL("/events", request.nextUrl.origin));
+  
+  const baseUrl = process.env.PUBLIC_URL || "http://localhost:3000";
+  const eventsUrl = `${baseUrl}/events`;
+  
+  const response = NextResponse.redirect(eventsUrl);
 
   response.cookies.set({
     name: SESSION_COOKIE_NAME,
