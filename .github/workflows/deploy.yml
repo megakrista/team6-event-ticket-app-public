@@ -3,59 +3,90 @@ name: Deploy Pipeline
 on:
   push:
     branches:
-      - main  # Trigger the workflow on pushes to the main branch
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the code
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Step 2: Set up Node.js
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 24  # Use Node.js 24
-
-      # Step 3: Install dependencies
-      - name: Install dependencies
-        run: npm install
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-      # Step 4: Generate Prisma Client
-      - name: Generate Prisma Client
-        run: npx prisma generate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-      # Step 5: Build the application
-      - name: Build application
-        run: npm run build
-
-      # Step 6: Set up SSH
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-      # Step 7: Deploy to Server
-      - name: Deploy to Server
+          cat >> ~/.ssh/config << 'EOF'
+          Host *
+            ServerAliveInterval 60
+            ServerAliveCountMax 10
+          EOF
+
+      - name: Build Docker image
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} bash -c "'
-          cd ~/team6
-          git pull origin main
-          echo \"DATABASE_URL=${{ secrets.DATABASE_URL }}\" > .env
-          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
-          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
-          echo "GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}" >> .env
-          echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> .env
-          echo "STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}" >> .env
-          echo "NEXT_PUBLIC_STRIPE_PUBLIC_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLIC_KEY }}" >> .env
-          docker compose down
-          docker compose up --build -d
-          '"
+          docker build \
+            --build-arg NEXT_PUBLIC_STRIPE_PUBLIC_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLIC_KEY }} \
+            -t event-ticket-app:latest \
+            .
+
+      - name: Write env file
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PUBLIC_URL: ${{ vars.PUBLIC_URL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REDIRECT_URI: ${{ vars.GOOGLE_REDIRECT_URI }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          NEXT_PUBLIC_STRIPE_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLIC_KEY }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+        run: |
+          printf 'DATABASE_URL=%s\n' "$DATABASE_URL" >> /tmp/.env
+          printf 'PUBLIC_URL=%s\n' "$PUBLIC_URL" >> /tmp/.env
+          printf 'GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID" >> /tmp/.env
+          printf 'GOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_SECRET" >> /tmp/.env
+          printf 'GOOGLE_REDIRECT_URI=%s\n' "$GOOGLE_REDIRECT_URI" >> /tmp/.env
+          printf 'STRIPE_SECRET_KEY=%s\n' "$STRIPE_SECRET_KEY" >> /tmp/.env
+          printf 'STRIPE_WEBHOOK_SECRET=%s\n' "$STRIPE_WEBHOOK_SECRET" >> /tmp/.env
+          printf 'NEXT_PUBLIC_STRIPE_PUBLIC_KEY=%s\n' "$NEXT_PUBLIC_STRIPE_PUBLIC_KEY" >> /tmp/.env
+          printf 'POSTGRES_USER=%s\n' "$POSTGRES_USER" >> /tmp/.env
+          printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD" >> /tmp/.env
+          printf 'POSTGRES_DB=%s\n' "$POSTGRES_DB" >> /tmp/.env
+
+      - name: Copy image and env to server
+        run: |
+          docker save event-ticket-app:latest | gzip > /tmp/event-ticket-app.tar.gz
+          scp /tmp/event-ticket-app.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/
+          scp /tmp/.env ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/.env
+
+      - name: Deploy to server
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          ssh $SSH_USER@$SSH_HOST << 'EOF'
+            set -e
+            cd ~/team6
+
+            git fetch origin main
+            git reset --hard origin/main
+
+            mv /tmp/.env ~/team6/.env
+
+            docker compose stop app
+            docker compose stop migrate
+
+            docker rmi event-ticket-app:latest || true
+            docker image prune -f
+
+            docker load < /tmp/event-ticket-app.tar.gz
+            rm /tmp/event-ticket-app.tar.gz
+
+            docker compose up -d --no-build --no-deps migrate
+            docker compose up -d --no-build --no-deps app
+          EOF
