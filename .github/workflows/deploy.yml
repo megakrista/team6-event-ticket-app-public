@@ -35,6 +35,13 @@ jobs:
       # Step 5: Build the application
       - name: Build application
         run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          STRIPE_SECRET_KEY: "sk_test_dummy_key_for_build_only"
+          STRIPE_WEBHOOK_SECRET: "whsec_dummy_secret_for_build_only"
+          GOOGLE_CLIENT_ID: "dummy-client-id.apps.googleusercontent.com"
+          GOOGLE_CLIENT_SECRET: "dummy-client-secret"
+          GOOGLE_REDIRECT_URI: "http://localhost:3000/api/auth/google/callback"
 
       # Step 6: Set up SSH
       - name: Set up SSH key
@@ -50,9 +57,10 @@ jobs:
           cd ~/team6
           git pull origin main
           echo \"DATABASE_URL=${{ secrets.DATABASE_URL }}\" > .env
+          echo "PUBLIC_URL=${{ vars.PUBLIC_URL }}" >> .env
           echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
           echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
-          echo "GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}" >> .env
+          echo "GOOGLE_REDIRECT_URI=${{ vars.GOOGLE_REDIRECT_URI }}" >> .env
           echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> .env
           echo "STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}" >> .env
           echo "NEXT_PUBLIC_STRIPE_PUBLIC_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLIC_KEY }}" >> .env
