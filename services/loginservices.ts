@@ -48,6 +48,15 @@ export async function loginFromBody(body: LoginBody): Promise<LoginServiceResult
       };
     }
 
+    if (!user.passwordHash) {
+      return {
+        status: 401,
+        body: {
+          error: "This account uses Google sign-in. Continue with Google.",
+        },
+      };
+    }
+
     const isPasswordValid = await bcrypt.compare(normalizedBody.password, user.passwordHash);
 
     if(!isPasswordValid){
