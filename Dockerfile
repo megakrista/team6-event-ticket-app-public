@@ -6,17 +6,23 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install dependencies
+# Copy Prisma files (needed for postinstall prisma generate)
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+
+# Set dummy environment variables for build
+ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy"
+ENV STRIPE_SECRET_KEY="sk_test_dummy_key_for_build_only"
+ENV STRIPE_WEBHOOK_SECRET="whsec_dummy_secret_for_build_only"
+ENV GOOGLE_CLIENT_ID="dummy-client-id.apps.googleusercontent.com"
+ENV GOOGLE_CLIENT_SECRET="dummy-client-secret"
+ENV GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/google/callback"
+
+# Install dependencies (runs prisma generate in postinstall)
 RUN npm ci
 
 # Copy application files
 COPY . .
-
-# Set dummy DATABASE_URL for prisma generate
-ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy"
-
-# Generate Prisma Client
-RUN npx prisma generate
 
 # Build Next.js application
 RUN npm run build
