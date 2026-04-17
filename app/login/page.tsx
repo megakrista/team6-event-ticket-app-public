@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { API_ROUTES } from "@/lib/api-routes";
 import { type LoginResponse } from "@/types/logintype";
 
@@ -11,7 +11,7 @@ type FormState = {
   password: string;
 };
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form, setForm] = useState<FormState>({
@@ -155,6 +155,21 @@ export default function LoginPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-zinc-50 p-8">
+        <div className="mx-auto max-w-md rounded-xl bg-white p-8 shadow">
+          <h1 className="mb-6 text-2xl font-bold text-zinc-900">Login</h1>
+          <p className="text-center text-zinc-600">Loading...</p>
+        </div>
+      </main>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
 
