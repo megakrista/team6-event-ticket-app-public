@@ -55,3 +55,22 @@ export async function getTicketByPaymentIntentId(paymentIntentId: string) {
     where: { paymentIntentId },
   });
 }
+
+export async function getUserTickets(userId: string) {
+  return prisma.ticket.findMany({
+    where: { 
+      userId,
+      status: TicketStatus.PAID,
+    },
+    include: {
+      event: {
+        include: {
+          venue: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}

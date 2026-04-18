@@ -24,6 +24,12 @@ export default function AppHeader() {
         </Link>
         <div className="flex items-center gap-4">
           <Link
+            href="/tickets"
+            className="text-sm font-medium text-zinc-700 hover:text-zinc-900"
+          >
+            My Tickets
+          </Link>
+          <Link
             href="/profile"
             className="text-sm font-medium text-zinc-700 hover:text-zinc-900"
           >
