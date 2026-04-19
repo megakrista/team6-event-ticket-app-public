@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { capitalize, formatDateTime, formatPrice } from "@/lib/format-helpers";
 import { getEventById } from "@/services/eventservices";
+import { getAllocatedSeatCount } from "@/services/ticketservices";
 import EventImage from "@/app/events/_components/EventImage";
 
 const getEvent = cache((id: string) => getEventById(id));
@@ -31,6 +32,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   }
 
   const event = result.event;
+  const soldCount = await getAllocatedSeatCount(event.id);
+  const remaining = event.capacity - soldCount;
+  const soldOut = remaining <= 0;
 
   return (
     <main className="min-h-screen bg-zinc-50 px-6 py-10">
@@ -108,13 +112,22 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               </p>
             </div>
 
-            <div className="mt-8">
-              <Link
-                href={`/payment?eventId=${event.id}`}
-                className="inline-block rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
-              >
-                Buy Ticket — {formatPrice(event.price)}
-              </Link>
+            <div className="mt-8 flex items-center gap-4">
+              {soldOut ? (
+                <span className="inline-block rounded-lg bg-zinc-300 px-6 py-3 text-sm font-semibold text-zinc-500 cursor-not-allowed">
+                  Sold out
+                </span>
+              ) : (
+                <Link
+                  href={`/payment?eventId=${event.id}`}
+                  className="inline-block rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+                >
+                  Buy Tickets — {formatPrice(event.price)}
+                </Link>
+              )}
+              <span className="text-sm text-zinc-500">
+                {soldOut ? "No tickets remaining" : `${remaining} ticket${remaining !== 1 ? "s" : ""} left`}
+              </span>
             </div>
           </div>
         </div>
