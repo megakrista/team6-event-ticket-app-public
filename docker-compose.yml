@@ -4,39 +4,48 @@ services:
     container_name: event-ticket-db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: event_ticket_app
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  migrate:
+    image: event-ticket-app:latest
+    command: npx prisma migrate deploy
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: event-ticket-app:latest
     container_name: event-ticket-app
     restart: always
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/event_ticket_app
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - PUBLIC_URL=${PUBLIC_URL}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-      - NEXT_PUBLIC_STRIPE_PUBLIC_KEY=${NEXT_PUBLIC_STRIPE_PUBLIC_KEY}
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:
