@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { error, success, validationError } from "@/lib/api-response";
 import { loginFromBody } from "@/services/loginservices";
 import { createSession } from "@/services/sessionservices";
 import { type LoginBody } from "@/types/logintype";
@@ -10,20 +10,29 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as LoginBody;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return error("Invalid JSON body", 400);
   }
 
   const result = await loginFromBody(body);
 
   if (result.status !== 200 || !result.body.userId) {
-    return NextResponse.json(result.body, { status: result.status });
+    const status = result.status === 200 ? 500 : result.status;
+
+    if (status === 400 && result.body.fields) {
+      return validationError(
+        result.body.fields,
+        result.body.error ?? "Validation failed",
+      );
+    }
+
+    return error(result.body.error ?? "Login failed. Please try again.", status);
   }
 
   try {
     const { token, expiresAt } = await createSession(result.body.userId);
-    const response = NextResponse.json(
+    const response = success(
       { message: result.body.message ?? "Login successful" },
-      { status: 200 },
+      200,
     );
 
     response.cookies.set({
@@ -43,9 +52,6 @@ export async function POST(request: Request) {
       sessionError,
     );
 
-    return NextResponse.json(
-      { error: "Login failed. Please try again." },
-      { status: 500 },
-    );
+    return error("Login failed. Please try again.", 500);
   }
 }

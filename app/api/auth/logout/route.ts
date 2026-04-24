@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { deleteSession } from "@/services/sessionservices";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
+import { error } from "@/lib/api-response";
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -8,10 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     await deleteSession(token);
   } catch {
-    return NextResponse.json(
-      { error: "Logout failed. Please try again." },
-      { status: 500 },
-    );
+    return error("Logout failed. Please try again.", 500);
   }
 
   const response = new NextResponse(null, { status: 204 });

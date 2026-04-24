@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { error, success, validationError } from "@/lib/api-response";
 import { createUserFromSignupBody } from "@/services/signupservices";
 import { type SignupBody } from "@/types/signuptype";
 
@@ -8,10 +8,21 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as SignupBody;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return error("Invalid JSON body", 400);
   }
 
   const result = await createUserFromSignupBody(body);
 
-  return NextResponse.json(result.body, { status: result.status });
+  if (result.status === 400 && result.body.fields) {
+    return validationError(
+      result.body.fields,
+      result.body.error ?? "Validation failed",
+    );
+  }
+
+  if (result.status >= 400) {
+    return error(result.body.error ?? "Sign up failed", result.status);
+  }
+
+  return success(result.body, result.status);
 }
