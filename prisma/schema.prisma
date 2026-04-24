@@ -31,6 +31,7 @@ model User {
   sessions      Session[]
   tickets       Ticket[]
   accounts      OAuthAccount[]
+  orders        Order[]
 }
 
 model OAuthAccount {
@@ -77,6 +78,7 @@ model Event {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   tickets     Ticket[]
+  orders      Order[]
 
   @@index([status, startsAt])
   @@index([status, category, startsAt])
@@ -95,6 +97,19 @@ enum TicketStatus {
   CANCELLED
 }
 
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
 model Session {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @db.Uuid
@@ -108,20 +123,58 @@ model Session {
   @@index([expiresAt])
 }
 
-model Ticket {
-  id              String       @id @default(uuid()) @db.Uuid
-  ticketNumber    String       @unique
-  attendeeName    String
-  attendeeEmail   String
-  amount          Float
-  status          TicketStatus @default(PENDING)
-  paymentIntentId String       @unique
-  eventId         String       @db.Uuid
-  event           Event        @relation(fields: [eventId], references: [id])
-  userId          String?      @db.Uuid
-  user            User?        @relation(fields: [userId], references: [id])
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+model Order {
+  id               String      @id @default(uuid()) @db.Uuid
+  idempotencyKey   String      @unique
+  totalAmount      Decimal     @db.Decimal(12, 2)
+  currency         String      @default("eur")
+  quantity         Int
+  status           OrderStatus @default(PENDING)
+  eventId          String      @db.Uuid
+  event            Event       @relation(fields: [eventId], references: [id])
+  userId           String?     @db.Uuid
+  user             User?       @relation(fields: [userId], references: [id])
+  buyerName        String
+  buyerEmail       String
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  payments         Payment[]
+  tickets          Ticket[]
 
   @@index([eventId, status])
+  @@index([userId])
+}
+
+model Payment {
+  id                String        @id @default(uuid()) @db.Uuid
+  amount            Decimal       @db.Decimal(12, 2)
+  status            PaymentStatus @default(PENDING)
+  method            String        @default("stripe")
+  externalPaymentId String        @unique
+  orderId           String        @db.Uuid
+  order             Order         @relation(fields: [orderId], references: [id])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([orderId])
+}
+
+model Ticket {
+  id            String       @id @default(uuid()) @db.Uuid
+  ticketNumber  String       @unique
+  attendeeName  String
+  attendeeEmail String
+  pricePaid     Decimal      @db.Decimal(12, 2)
+  status        TicketStatus @default(PENDING)
+  orderId       String       @db.Uuid
+  order         Order        @relation(fields: [orderId], references: [id])
+  eventId       String       @db.Uuid
+  event         Event        @relation(fields: [eventId], references: [id])
+  userId        String?      @db.Uuid
+  user          User?        @relation(fields: [userId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([eventId, status])
+  @@index([orderId])
 }

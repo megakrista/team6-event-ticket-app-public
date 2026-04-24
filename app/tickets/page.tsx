@@ -8,14 +8,14 @@ import TicketsManager, { type TicketItem } from "@/app/tickets/_components/Ticke
 export const dynamic = "force-dynamic";
 
 function prismaTicketToItem(
-  ticket: Awaited<ReturnType<typeof getUserTickets>>[number],
+    ticket: Awaited<ReturnType<typeof getUserTickets>>[number],
 ): TicketItem {
   return {
     id: ticket.id,
     ticketNumber: ticket.ticketNumber,
     attendeeName: ticket.attendeeName,
     attendeeEmail: ticket.attendeeEmail,
-    amount: ticket.amount,
+    amount: Number(ticket.pricePaid), // Change from ticket.amount to ticket.pricePaid
     status: ticket.status,
     createdAt: new Date(ticket.createdAt).toISOString(),
     event: {
