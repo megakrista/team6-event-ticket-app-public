@@ -2,9 +2,9 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { getEventById } from "@/services/eventservices";
 import { getSessionByToken } from "@/services/sessionservices";
+import { getAllocatedSeatCount } from "@/services/ticketservices";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
 import prisma from "@/lib/prisma";
-import { TicketStatus } from "@prisma/client";
 import PaymentForm from "@/app/payment/_components/PaymentForm";
 
 export default async function PaymentPage({
@@ -24,11 +24,9 @@ export default async function PaymentPage({
     return <main className="p-10 text-center text-red-600">Event not found.</main>;
   }
 
-  const event = result.event;
+  const event = result.event!;
 
-  const soldCount = await prisma.ticket.count({
-    where: { eventId: event.id, status: TicketStatus.PAID },
-  });
+  const soldCount = await getAllocatedSeatCount(event.id);
 
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -86,7 +84,8 @@ export default async function PaymentPage({
           </div>
         ) : (
           <PaymentForm
-            event={{ id: event.id, title: event.title, price: event.price }}
+            event={{ id: event.id, price: event.price }}
+            remainingCapacity={event.capacity - soldCount}
             initialName={initialName}
             initialEmail={initialEmail}
           />

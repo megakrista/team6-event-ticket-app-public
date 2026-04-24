@@ -33,6 +33,9 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/event_ticket_app?sch
 STRIPE_SECRET_KEY="sk_test_..."
 NEXT_PUBLIC_STRIPE_PUBLIC_KEY="pk_test_..."
 STRIPE_WEBHOOK_SECRET="whsec_..."
+GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/google/callback"
 ```
 
 ## 4. Start PostgreSQL (Docker)

@@ -1,0 +1,86 @@
+name: Deploy Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          cat >> ~/.ssh/config << 'EOF'
+          Host *
+            ServerAliveInterval 60
+            ServerAliveCountMax 10
+          EOF
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_STRIPE_PUBLIC_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLIC_KEY }} \
+            -t event-ticket-app:latest \
+            .
+
+      - name: Write env file
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PUBLIC_URL: ${{ vars.PUBLIC_URL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REDIRECT_URI: ${{ vars.GOOGLE_REDIRECT_URI }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          NEXT_PUBLIC_STRIPE_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLIC_KEY }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+        run: |
+          printf 'DATABASE_URL=%s\n' "$DATABASE_URL" >> /tmp/.env
+          printf 'PUBLIC_URL=%s\n' "$PUBLIC_URL" >> /tmp/.env
+          printf 'GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID" >> /tmp/.env
+          printf 'GOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_SECRET" >> /tmp/.env
+          printf 'GOOGLE_REDIRECT_URI=%s\n' "$GOOGLE_REDIRECT_URI" >> /tmp/.env
+          printf 'STRIPE_SECRET_KEY=%s\n' "$STRIPE_SECRET_KEY" >> /tmp/.env
+          printf 'STRIPE_WEBHOOK_SECRET=%s\n' "$STRIPE_WEBHOOK_SECRET" >> /tmp/.env
+          printf 'NEXT_PUBLIC_STRIPE_PUBLIC_KEY=%s\n' "$NEXT_PUBLIC_STRIPE_PUBLIC_KEY" >> /tmp/.env
+          printf 'POSTGRES_USER=%s\n' "$POSTGRES_USER" >> /tmp/.env
+          printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD" >> /tmp/.env
+          printf 'POSTGRES_DB=%s\n' "$POSTGRES_DB" >> /tmp/.env
+
+      - name: Copy image and env to server
+        run: |
+          docker save event-ticket-app:latest | gzip > /tmp/event-ticket-app.tar.gz
+          scp /tmp/event-ticket-app.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/
+          scp /tmp/.env ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/.env
+
+      - name: Deploy to server
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          ssh $SSH_USER@$SSH_HOST << 'EOF'
+            set -e
+            cd ~/team6
+
+            git fetch origin main
+            git reset --hard origin/main
+
+            mv /tmp/.env ~/team6/.env
+
+            docker load < /tmp/event-ticket-app.tar.gz
+            rm /tmp/event-ticket-app.tar.gz
+
+            docker compose up -d --no-build --no-deps migrate
+            docker compose up -d --no-build --no-deps app
+          EOF

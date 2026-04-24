@@ -5,6 +5,7 @@ export const API_ROUTES = {
   eventById: (id: string) => `/api/events/${id}`,
   signup: "/api/auth/signup",
   login: "/api/auth/login",
+  googleAuthStart: "/api/auth/google/start",
   userMe: "/api/users/me",
   userById: (id: string) => `/api/users/${id}`,
 } as const;
