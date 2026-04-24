@@ -1,5 +1,6 @@
 import { EventStatus, Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
+import { publicEventSaleWhere } from "@/lib/event-availability";
 import {
   VALID_CATEGORIES,
   type EventInput,
@@ -329,9 +330,10 @@ export async function listEvents(
   const page = Math.max(1, Number.isFinite(params.page) ? params.page! : 1);
   const skip = (page - 1) * EVENTS_PER_PAGE;
   const dateFrom = params.dateFrom ? new Date(params.dateFrom + "T00:00:00.000Z") : null;
+  const hasValidDateFrom = !!(dateFrom && !isNaN(dateFrom.getTime()));
 
   const where: Prisma.EventWhereInput = {
-    status: EventStatus.PUBLISHED,
+    ...publicEventSaleWhere(),
     ...(params.search && {
       OR: [
         { title: { contains: params.search, mode: "insensitive" } },
@@ -343,8 +345,8 @@ export async function listEvents(
     ...(params.category && VALID_CATEGORIES.includes(params.category as EventCategory) && {
       category: params.category,
     }),
-    ...(dateFrom && !isNaN(dateFrom.getTime()) && {
-      startsAt: { gte: dateFrom },
+    ...(hasValidDateFrom && {
+      startsAt: { gte: dateFrom! },
     }),
   };
 

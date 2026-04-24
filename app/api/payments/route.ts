@@ -7,6 +7,7 @@ import { getEventById } from "@/services/eventservices";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
 import { getSessionByToken } from "@/services/sessionservices";
 import { checkoutRateLimitExceeded, clientIpFromRequest } from "@/lib/checkout-rate-limit";
+import { getSaleAvailability } from "@/lib/event-availability";
 import { getAllocatedSeatCount } from "@/services/ticketservices";
 import { createCheckoutOrderAndPaymentIntent } from "@/services/orderservices";
 
@@ -31,8 +32,9 @@ export async function POST(request: NextRequest) {
     }
 
     const event = eventResult.event;
-    if (event.status !== "PUBLISHED") {
-      return error("Event not available", 400);
+    const availability = getSaleAvailability(event);
+    if (!availability.ok) {
+      return error(availability.message, 400);
     }
 
     const perTicketCents = Math.round(event.price * 100);
