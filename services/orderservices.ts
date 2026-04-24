@@ -391,17 +391,27 @@ export async function getOrderByStripePaymentIntentId(paymentIntentId: string) {
 
 const DEFAULT_STALE_PENDING_MINUTES = 180;
 
-/** Cancels stale checkout holds so capacity frees up. Schedule via POST /api/cron/expire-pending-orders. */
+/**
+ * Cancels PENDING orders (not PAID) that are past STALE_PENDING_ORDER_MINUTES (default 180) or past event end.
+ * Frees capacity; run from POST /api/cron/expire-pending-orders.
+ */
 export async function expireStalePendingOrders(): Promise<number> {
   const raw = process.env.STALE_PENDING_ORDER_MINUTES;
   const parsed = raw ? Number(raw) : DEFAULT_STALE_PENDING_MINUTES;
   const minutes =
     Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_STALE_PENDING_MINUTES;
-  const cutoff = new Date(Date.now() - minutes * 60_000);
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - minutes * 60_000);
 
   return prisma.$transaction(async (tx) => {
     const stale = await tx.order.findMany({
-      where: { status: OrderStatus.PENDING, createdAt: { lt: cutoff } },
+      where: {
+        status: OrderStatus.PENDING,
+        OR: [
+          { createdAt: { lt: cutoff } },
+          { event: { endsAt: { lte: now } } },
+        ],
+      },
       select: { id: true },
     });
     if (stale.length === 0) return 0;
