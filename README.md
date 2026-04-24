@@ -78,3 +78,23 @@ npm run dev
 ```
 
 Open `http://localhost:3000`
+
+## 7. Automated tests (Vitest)
+
+This project uses **Vitest** for unit tests.
+
+Test commands:
+
+```powershell
+npm run test
+npm run test:watch
+npm run test:coverage
+```
+
+Test files are in `tests/`:
+
+- `tests/unit/services` - service-layer unit tests
+- `tests/unit/lib` - helper/utility unit tests
+- `tests/unit/api` - API helper and critical route handler unit tests
+
+Vitest config is in `vitest.config.ts` and includes all `tests/**/*.test.ts`.
