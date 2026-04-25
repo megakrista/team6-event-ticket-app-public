@@ -29,7 +29,13 @@ describe("loginFromBody", () => {
   it("returns 400 when email/password are missing", async () => {
     await expect(loginFromBody({ email: "", password: "" })).resolves.toEqual({
       status: 400,
-      body: { error: "Email and password are required" },
+      body: {
+        error: "Email and password are required",
+        fields: {
+          email: "Required",
+          password: "Required",
+        },
+      },
     });
     expect(prismaMock.user.findUnique).not.toHaveBeenCalled();
   });

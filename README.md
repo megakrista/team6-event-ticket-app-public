@@ -81,12 +81,13 @@ Open `http://localhost:3000`
 
 ## 7. Automated tests (Vitest)
 
-This project uses **Vitest** for unit tests.
+This project uses **Vitest** for both unit and integration tests.
 
 Test commands:
 
 ```powershell
 npm run test
+npm run test:integration
 npm run test:watch
 npm run test:coverage
 ```
@@ -96,5 +97,15 @@ Test files are in `tests/`:
 - `tests/unit/services` - service-layer unit tests
 - `tests/unit/lib` - helper/utility unit tests
 - `tests/unit/api` - API helper and critical route handler unit tests
+- `tests/integration` - DB-backed integration tests for:
+  - auth/users/session
+  - events/venues/ticket allocation
+  - order/payment fulfillment flows
+
+Integration test prerequisites:
+
+- PostgreSQL must be running
+- `DATABASE_URL` must be set (usually via `.env`)
 
 Vitest config is in `vitest.config.ts` and includes all `tests/**/*.test.ts`.
+Environment variables are loaded from `.env` in `tests/setup-env.ts`.

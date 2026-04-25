@@ -39,6 +39,12 @@ describe("createUserFromSignupBody", () => {
       status: 400,
       body: {
         error: "Email, password, first name, and last name are required",
+        fields: {
+          email: "Required",
+          password: "Required",
+          firstName: "Required",
+          lastName: "Required",
+        },
       },
     });
     expect(bcryptMock.hash).not.toHaveBeenCalled();
