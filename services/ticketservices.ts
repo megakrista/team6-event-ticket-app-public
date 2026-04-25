@@ -22,3 +22,23 @@ export async function getAllocatedSeatCount(eventId: string): Promise<number> {
   ]);
   return paid + (pendingAgg._sum.quantity ?? 0);
 }
+
+
+export async function getUserTickets(userId: string) {
+  return prisma.ticket.findMany({
+    where: {
+      userId,
+      status: TicketStatus.PAID,
+    },
+    include: {
+      event: {
+        include: {
+          venue: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
