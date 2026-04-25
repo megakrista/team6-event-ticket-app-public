@@ -4,6 +4,7 @@ import { getEventById } from "@/services/eventservices";
 import { getSessionByToken } from "@/services/sessionservices";
 import { getAllocatedSeatCount } from "@/services/ticketservices";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-constants";
+import { getSaleAvailability } from "@/lib/event-availability";
 import prisma from "@/lib/prisma";
 import PaymentForm from "@/app/payment/_components/PaymentForm";
 
@@ -25,6 +26,26 @@ export default async function PaymentPage({
   }
 
   const event = result.event!;
+
+  const availability = getSaleAvailability(event);
+  if (!availability.ok) {
+    return (
+      <main className="max-w-xl mx-auto p-10 text-center">
+        <h1 className="text-2xl font-bold text-red-600 mb-2">
+          {availability.reason === "ended"
+            ? "This event has ended"
+            : "Tickets are not available"}
+        </h1>
+        <p className="text-sm text-slate-600 mb-6">{availability.message}.</p>
+        <Link
+          href="/events"
+          className="inline-block rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          Browse events
+        </Link>
+      </main>
+    );
+  }
 
   const soldCount = await getAllocatedSeatCount(event.id);
 

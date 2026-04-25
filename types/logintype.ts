@@ -7,6 +7,7 @@ export type LoginResponse = {
     error?: string;
     message?: string;
     userId?: string;
+    fields?: Record<string, string>;
 };
 
 export type LoginServiceResult = {
