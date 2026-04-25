@@ -3,15 +3,13 @@ import {
   PrismaClientKnownRequestError,
 } from "@prisma/client/runtime/client";
 import prisma from "@/lib/prisma";
+import { UUID_RE } from "@/lib/uuid";
 import {
   type VenueResponse,
   type VenueInput,
   type VenueValidationErrors,
   type VenueWriteResult,
 } from "@/types/venuetype";
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type PrismaVenue = {
   id: string;

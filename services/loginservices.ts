@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import prisma from "@/lib/prisma";
+import { normalizeEmail } from "@/lib/user-validation";
 import {
   type NormalizedLoginBody,
   type LoginBody,
@@ -11,17 +12,12 @@ function normalizeLoginBody(body: LoginBody): {
   validationErrors: Record<string, string>;
 } {
   const validationErrors: Record<string, string> = {};
-  const email = typeof body.email === "string" ? body.email.trim() : "";
+  const email = normalizeEmail(body.email);
   // TODO: remove trim() after password validation.
   const password = typeof body.password === "string" ? body.password.trim() : "";
 
-  if (!email) {
-    validationErrors.email = "Required";
-  }
-
-  if (!password) {
-    validationErrors.password = "Required";
-  }
+  if (!email) validationErrors.email = "Required";
+  if (!password) validationErrors.password = "Required";
 
   if (Object.keys(validationErrors).length > 0) {
     return {
@@ -32,7 +28,7 @@ function normalizeLoginBody(body: LoginBody): {
 
   return {
     normalizedBody: {
-      email: email.toLowerCase(),
+      email: email!,
       password,
     },
     validationErrors,

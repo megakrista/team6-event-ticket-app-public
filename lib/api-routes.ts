@@ -7,5 +7,6 @@ export const API_ROUTES = {
   login: "/api/auth/login",
   googleAuthStart: "/api/auth/google/start",
   userMe: "/api/users/me",
+  users: "/api/users",
   userById: (id: string) => `/api/users/${id}`,
 } as const;
