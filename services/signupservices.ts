@@ -2,6 +2,12 @@ import bcrypt from "bcrypt";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import {
+  normalizeEmail,
+  normalizeName,
+  validateEmail,
+  validateName,
+} from "@/lib/user-validation";
+import {
   type NormalizedSignupBody,
   type SignupBody,
   type SignupServiceResult,
@@ -12,29 +18,29 @@ function normalizeSignupBody(body: SignupBody): {
   validationErrors: Record<string, string>;
 } {
   const validationErrors: Record<string, string> = {};
-  const email = typeof body.email === "string" ? body.email.trim() : "";
+  const email = normalizeEmail(body.email);
+  const firstName = normalizeName(body.firstName);
+  const lastName = normalizeName(body.lastName);
   // TODO: remove trim() after password validation.
   const password =
     typeof body.password === "string" ? body.password.trim() : "";
-  const firstName =
-    typeof body.firstName === "string" ? body.firstName.trim() : "";
-  const lastName = typeof body.lastName === "string" ? body.lastName.trim() : "";
 
-  if (!email) {
-    validationErrors.email = "Required";
-  }
+  const emailError = validateEmail(email, { required: true });
+  if (emailError) validationErrors.email = emailError;
 
-  if (!password) {
-    validationErrors.password = "Required";
-  }
+  if (!password) validationErrors.password = "Required";
 
-  if (!firstName) {
-    validationErrors.firstName = "Required";
-  }
+  const firstNameError = validateName(firstName, {
+    required: true,
+    field: "First name",
+  });
+  if (firstNameError) validationErrors.firstName = firstNameError;
 
-  if (!lastName) {
-    validationErrors.lastName = "Required";
-  }
+  const lastNameError = validateName(lastName, {
+    required: true,
+    field: "Last name",
+  });
+  if (lastNameError) validationErrors.lastName = lastNameError;
 
   if (Object.keys(validationErrors).length > 0) {
     return {
@@ -45,10 +51,10 @@ function normalizeSignupBody(body: SignupBody): {
 
   return {
     normalizedBody: {
-      email: email.toLowerCase(),
+      email: email!,
       password,
-      firstName,
-      lastName,
+      firstName: firstName!,
+      lastName: lastName!,
     },
     validationErrors,
   };

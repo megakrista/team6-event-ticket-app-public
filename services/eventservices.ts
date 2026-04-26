@@ -1,6 +1,7 @@
 import { EventStatus, Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { publicEventSaleWhere } from "@/lib/event-availability";
+import { UUID_RE } from "@/lib/uuid";
 import {
   VALID_CATEGORIES,
   type EventInput,
@@ -12,8 +13,6 @@ import {
 
 export const EVENTS_PER_PAGE = 9;
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type UpdatableEventStatus =
   | typeof EventStatus.DRAFT
   | typeof EventStatus.PUBLISHED;
