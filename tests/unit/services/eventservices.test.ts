@@ -453,13 +453,23 @@ describe("listEvents", () => {
 
     expect(prismaEventMock.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { status: EventStatus.PUBLISHED },
+        where: expect.objectContaining({
+          status: EventStatus.PUBLISHED,
+          endsAt: {
+            gt: expect.any(Date),
+          },
+        }),
         skip: 0,
         take: EVENTS_PER_PAGE,
       }),
     );
     expect(prismaEventMock.count).toHaveBeenCalledWith({
-      where: { status: EventStatus.PUBLISHED },
+      where: expect.objectContaining({
+        status: EventStatus.PUBLISHED,
+        endsAt: {
+          gt: expect.any(Date),
+        },
+      }),
     });
   });
 
@@ -494,7 +504,16 @@ describe("listEvents", () => {
     });
 
     const findManyArgs = prismaEventMock.findMany.mock.calls[0]?.[0];
-    expect(findManyArgs.where).toEqual({ status: EventStatus.PUBLISHED });
+    expect(findManyArgs.where).toEqual(
+      expect.objectContaining({
+        status: EventStatus.PUBLISHED,
+        endsAt: {
+          gt: expect.any(Date),
+        },
+      }),
+    );
+    expect(findManyArgs.where.category).toBeUndefined();
+    expect(findManyArgs.where.startsAt).toBeUndefined();
     expect(findManyArgs.skip).toBe(0);
     expect(findManyArgs.take).toBe(EVENTS_PER_PAGE);
   });
